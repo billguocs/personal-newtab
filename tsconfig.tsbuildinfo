@@ -1,0 +1,1 @@
+{"root":["./src/api/bing.ts","./src/api/github.ts","./src/api/v2ex.ts","./src/api/zhihu.ts","./src/i18n/index.ts","./src/newtab/main.ts","./src/stores/hotlist.ts","./src/stores/layout.ts","./src/stores/settings.ts","./src/types/index.ts","./src/utils/constants.ts","./src/utils/helpers.ts","./src/utils/storage.ts"],"errors":true,"version":"5.9.3"}

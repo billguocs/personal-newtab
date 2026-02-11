@@ -1,0 +1,83 @@
+{
+  "extName": {
+    "message": "个性化新标签页"
+  },
+  "extDescription": {
+    "message": "一个简洁美观的新标签页扩展，支持自定义壁纸、多搜索引擎、AI交互、热榜等功能"
+  },
+  "searchPlaceholder": {
+    "message": "输入搜索内容或AI问题..."
+  },
+  "search": {
+    "message": "搜索"
+  },
+  "aiMode": {
+    "message": "AI模式"
+  },
+  "searchMode": {
+    "message": "搜索模式"
+  },
+  "customWallpaper": {
+    "message": "自定义壁纸"
+  },
+  "bingWallpaper": {
+    "message": "Bing每日一图"
+  },
+  "uploadImage": {
+    "message": "上传图片"
+  },
+  "hotList": {
+    "message": "热榜"
+  },
+  "githubTrending": {
+    "message": "GitHub趋势"
+  },
+  "zhihuHot": {
+    "message": "知乎热榜"
+  },
+  "v2exHot": {
+    "message": "V2EX热议"
+  },
+  "refresh": {
+    "message": "刷新"
+  },
+  "settings": {
+    "message": "设置"
+  },
+  "layout": {
+    "message": "布局"
+  },
+  "editLayout": {
+    "message": "编辑布局"
+  },
+  "saveLayout": {
+    "message": "保存布局"
+  },
+  "resetLayout": {
+    "message": "重置布局"
+  },
+  "language": {
+    "message": "语言"
+  },
+  "chinese": {
+    "message": "中文"
+  },
+  "english": {
+    "message": "English"
+  },
+  "stars": {
+    "message": "星标"
+  },
+  "today": {
+    "message": "今日"
+  },
+  "week": {
+    "message": "本周"
+  },
+  "month": {
+    "message": "本月"
+  },
+  "replies": {
+    "message": "回复"
+  }
+}

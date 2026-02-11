@@ -1,0 +1,83 @@
+{
+  "extName": {
+    "message": "Personal New Tab"
+  },
+  "extDescription": {
+    "message": "A beautiful new tab extension with custom wallpaper, multiple search engines, AI interaction, and hot lists"
+  },
+  "searchPlaceholder": {
+    "message": "Enter search query or AI question..."
+  },
+  "search": {
+    "message": "Search"
+  },
+  "aiMode": {
+    "message": "AI Mode"
+  },
+  "searchMode": {
+    "message": "Search Mode"
+  },
+  "customWallpaper": {
+    "message": "Custom Wallpaper"
+  },
+  "bingWallpaper": {
+    "message": "Bing Daily Image"
+  },
+  "uploadImage": {
+    "message": "Upload Image"
+  },
+  "hotList": {
+    "message": "Hot Lists"
+  },
+  "githubTrending": {
+    "message": "GitHub Trending"
+  },
+  "zhihuHot": {
+    "message": "Zhihu Hot"
+  },
+  "v2exHot": {
+    "message": "V2EX Hot"
+  },
+  "refresh": {
+    "message": "Refresh"
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "layout": {
+    "message": "Layout"
+  },
+  "editLayout": {
+    "message": "Edit Layout"
+  },
+  "saveLayout": {
+    "message": "Save Layout"
+  },
+  "resetLayout": {
+    "message": "Reset Layout"
+  },
+  "language": {
+    "message": "Language"
+  },
+  "chinese": {
+    "message": "中文"
+  },
+  "english": {
+    "message": "English"
+  },
+  "stars": {
+    "message": "stars"
+  },
+  "today": {
+    "message": "Today"
+  },
+  "week": {
+    "message": "Week"
+  },
+  "month": {
+    "message": "Month"
+  },
+  "replies": {
+    "message": "replies"
+  }
+}
