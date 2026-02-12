@@ -7,11 +7,19 @@
     <div v-else-if="weather" class="weather-content" @click="showSettings = true">
       <div class="weather-main">
         <span class="weather-icon">{{ weatherIcon }}</span>
-        <span class="temperature">{{ weather.temperature }}°</span>
+        <div class="weather-info">
+          <div class="temperature">{{ weather.temperature }}°</div>
+          <div class="location">{{ shortLocationName }}</div>
+        </div>
       </div>
-      <div class="weather-info">
-        <div class="weather-desc">{{ weatherDescription }}</div>
-        <div class="location">{{ locationName }}</div>
+      
+      <!-- 紧凑的预报信息 -->
+      <div v-if="weather.forecast && weather.forecast.length > 0" class="forecast-compact">
+        <div v-for="(day, index) in weather.forecast.slice(0, 3)" :key="index" class="forecast-day">
+          <span class="day-name">{{ formatShortDate(day.date) }}</span>
+          <span class="day-icon">{{ getWeatherInfo(day.weatherCode).icon }}</span>
+          <span class="day-temp">{{ day.maxTemp }}°</span>
+        </div>
       </div>
     </div>
     
@@ -62,7 +70,7 @@
         
         <div v-if="selectedLocation" class="current-location">
           <div class="location-label">当前位置：</div>
-          <div class="location-value">{{ selectedLocation.name }}</div>
+          <div class="location-value">{{ fullLocationName }}</div>
           <button class="refresh-btn" @click="refreshWeather">刷新天气</button>
         </div>
       </div>
@@ -90,17 +98,39 @@ const weatherIcon = computed(() => {
   return getWeatherInfo(weather.value.weatherCode).icon
 })
 
-const weatherDescription = computed(() => {
-  if (!weather.value) return ''
-  return getWeatherInfo(weather.value.weatherCode).description
+// 完整地区名
+const fullLocationName = computed(() => {
+  if (!selectedLocation.value) {
+    return weather.value?.location || ''
+  }
+  const parts = []
+  if (selectedLocation.value.name) parts.push(selectedLocation.value.name)
+  if (selectedLocation.value.region) parts.push(selectedLocation.value.region)
+  if (selectedLocation.value.country) parts.push(selectedLocation.value.country)
+  return parts.join(' · ')
 })
 
-const locationName = computed(() => {
-  if (selectedLocation.value) {
+// 简短地区名（只显示城市）
+const shortLocationName = computed(() => {
+  if (selectedLocation.value?.name) {
     return selectedLocation.value.name
   }
   return weather.value?.location || ''
 })
+
+function formatShortDate(dateStr: string) {
+  const date = new Date(dateStr)
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  
+  if (date.toDateString() === tomorrow.toDateString()) {
+    return '明天'
+  }
+  
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+  return '周' + weekdays[date.getDay()]
+}
 
 async function loadSavedLocation() {
   const saved = await storage.getCachedData<{ location: LocationData; weather: WeatherData }>('weatherLocation')
@@ -146,7 +176,6 @@ async function updateWeather(location: LocationData) {
     if (weatherData) {
       weather.value = weatherData
       selectedLocation.value = location
-      // 保存到缓存
       await storage.setCachedData('weatherLocation', { location, weather: weatherData })
       showSettings.value = false
     }
@@ -163,7 +192,6 @@ async function refreshWeather() {
 
 onMounted(() => {
   loadSavedLocation()
-  // 如果没有保存的位置，尝试自动获取
   if (!selectedLocation.value) {
     getLocationWeather()
   }
@@ -186,35 +214,31 @@ onMounted(() => {
 }
 
 .weather-content {
-  @apply flex items-center gap-3 p-3 rounded-xl transition-all duration-200;
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
+  @apply flex items-center gap-4 p-3 rounded-xl transition-all duration-200;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .weather-content:hover {
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .weather-main {
-  @apply flex items-center gap-1;
+  @apply flex items-center gap-2;
 }
 
 .weather-icon {
-  @apply text-2xl;
-}
-
-.temperature {
-  @apply text-2xl font-bold;
-  color: var(--text-primary);
+  @apply text-3xl;
 }
 
 .weather-info {
   @apply flex flex-col;
 }
 
-.weather-desc {
-  @apply text-sm font-medium;
+.temperature {
+  @apply text-2xl font-bold leading-none;
   color: var(--text-primary);
 }
 
@@ -223,16 +247,40 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
+/* 紧凑预报 */
+.forecast-compact {
+  @apply flex items-center gap-3 pl-3;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.forecast-day {
+  @apply flex flex-col items-center gap-0.5;
+  min-width: 36px;
+}
+
+.day-name {
+  @apply text-xs;
+  color: var(--text-secondary);
+}
+
+.day-icon {
+  @apply text-lg leading-none;
+}
+
+.day-temp {
+  @apply text-xs font-medium;
+  color: var(--text-primary);
+}
+
 .weather-error {
   @apply flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all duration-200;
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--text-secondary);
 }
 
 .weather-error:hover {
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .icon {

@@ -41,13 +41,15 @@ onUnmounted(() => {
 <style scoped>
 .clock-weather-widget {
   @apply flex items-center justify-between px-4 py-2;
-  width: 50%;
+  width: 60%;
   margin: 0 auto;
   max-width: 800px;
+  gap: 16px;
 }
 
 .clock-section {
   @apply flex flex-col;
+  flex-shrink: 0;
 }
 
 .time {

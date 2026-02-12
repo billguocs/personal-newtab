@@ -1,17 +1,22 @@
 <template>
   <div class="navigation-widget">
     <div v-if="!isEditing" class="nav-links">
-      <template v-if="navRows.length > 0">
-        <div class="nav-row" v-for="row in navRows" :key="row.id">
+      <template v-if="navLinks.length > 0">
+        <div class="nav-row">
           <a
-            v-for="link in row.links"
+            v-for="link in navLinks"
             :key="link.id"
             :href="link.url"
             target="_blank"
             class="nav-item"
             :title="link.name"
           >
-            <span class="nav-icon">{{ link.icon || getDefaultIcon(link.name) }}</span>
+            <img 
+              :src="getFaviconUrl(link.url)" 
+              :alt="link.name"
+              class="nav-favicon"
+              @error="handleFaviconError($event, link.name)"
+            />
             <span class="nav-name">{{ link.name }}</span>
           </a>
         </div>
@@ -132,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import type { NavigationLink } from '@/types'
 import { storage } from '@/utils/storage'
 
@@ -153,17 +158,30 @@ const defaultLinks: NavigationLink[] = [
   { id: '5', name: '掘金', url: 'https://juejin.cn', icon: '📖' }
 ]
 
-// 将链接分成两行
-const navRows = computed(() => {
-  if (!navLinks.value || navLinks.value.length === 0) {
-    return []
+// 获取网站 favicon URL
+function getFaviconUrl(url: string): string {
+  try {
+    const domain = new URL(url).hostname
+    // 使用 Google Favicon API
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+  } catch {
+    return ''
   }
-  const mid = Math.ceil(navLinks.value.length / 2)
-  return [
-    { id: 'row1', links: navLinks.value.slice(0, mid) },
-    { id: 'row2', links: navLinks.value.slice(mid) }
-  ].filter(row => row.links.length > 0)
-})
+}
+
+// 处理 favicon 加载失败
+function handleFaviconError(event: Event, name: string) {
+  const img = event.target as HTMLImageElement
+  // 显示默认图标
+  img.style.display = 'none'
+  const parent = img.parentElement
+  if (parent) {
+    const fallback = document.createElement('span')
+    fallback.className = 'nav-icon-fallback'
+    fallback.textContent = getDefaultIcon(name)
+    parent.insertBefore(fallback, img)
+  }
+}
 
 function getDefaultIcon(name: string): string {
   const iconMap: Record<string, string> = {
@@ -187,19 +205,34 @@ function getDefaultIcon(name: string): string {
 }
 
 async function loadNavLinks() {
-  const saved = await storage.getCachedData<NavigationLink[]>('navigationLinks')
-  if (saved && Array.isArray(saved) && saved.length > 0) {
-    navLinks.value = saved
-    console.log('Navigation: 已加载保存的链接', saved.length, '个')
-  } else {
+  try {
+    const saved = await storage.getNavigationLinks<NavigationLink[]>()
+    
+    // 只有当 saved 是 null 或 undefined 时才使用默认值（表示从未保存过）
+    // 空数组 [] 是有效值，表示用户手动清空了导航
+    if (saved !== null && saved !== undefined) {
+      // 再次确认是数组类型
+      navLinks.value = Object.values(saved)
+    } else {
+      // 从未保存过数据，使用默认值
+      navLinks.value = JSON.parse(JSON.stringify(defaultLinks))
+      await saveToStorage()
+      console.log('Navigation: 首次使用，已加载并保存默认链接', defaultLinks.length, '个')
+    }
+  } catch (error) {
+    console.error('Navigation: 加载失败', error)
     navLinks.value = JSON.parse(JSON.stringify(defaultLinks))
-    await saveToStorage()
-    console.log('Navigation: 已加载默认链接', defaultLinks.length, '个')
   }
 }
 
 async function saveToStorage() {
-  await storage.setCachedData('navigationLinks', navLinks.value)
+  try {
+    await storage.setNavigationLinks(navLinks.value)
+    console.log('Navigation: 已保存', navLinks.value.length, '个链接:', navLinks.value.map(l => l.name))
+  } catch (error) {
+    console.error('Navigation: 保存失败', error)
+    alert('保存导航失败，请检查权限设置')
+  }
 }
 
 function startEdit() {
@@ -215,8 +248,10 @@ function cancelEdit() {
 async function saveLinks() {
   // 过滤掉空项
   navLinks.value = navLinks.value.filter(link => link.name.trim() && link.url.trim())
+  console.log('Navigation: 准备保存', navLinks.value.length, '个链接')
   await saveToStorage()
   isEditing.value = false
+  console.log('Navigation: 编辑模式关闭')
 }
 
 function addLink() {
@@ -230,8 +265,10 @@ function addLink() {
   }
 }
 
-function removeLink(index: number) {
+async function removeLink(index: number) {
   navLinks.value.splice(index, 1)
+  // 删除后立即保存
+  await saveToStorage()
 }
 
 // 书签导入相关
@@ -301,6 +338,8 @@ async function importBookmarks() {
   const remainingSlots = 10 - navLinks.value.length
   if (remainingSlots > 0) {
     navLinks.value = [...navLinks.value, ...newLinks.slice(0, remainingSlots)]
+    // 立即保存导入的书签
+    await saveToStorage()
   }
   
   selectedBookmarks.value = []
@@ -339,26 +378,33 @@ onMounted(() => {
 }
 
 .nav-links {
-  @apply flex flex-col gap-2;
+  @apply w-full;
 }
 
 .nav-row {
-  @apply flex flex-wrap gap-2 justify-center;
+  @apply flex flex-wrap justify-center;
+  gap: 8px;
 }
 
-.nav-empty {
-  @apply flex items-center justify-center py-4;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
+/* 每行最多5个 */
 .nav-item {
-  @apply flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200;
+  @apply flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200;
+  flex: 0 0 calc(20% - 6.4px);
+  max-width: calc(20% - 6.4px);
+  min-width: 100px;
   background: rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.5);
   color: var(--text-primary);
   text-decoration: none;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .nav-item {
+    flex: 0 0 calc(33.333% - 5.33px);
+    max-width: calc(33.333% - 5.33px);
+  }
 }
 
 .nav-item:hover {
@@ -367,12 +413,24 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.nav-icon {
-  @apply text-lg;
+.nav-favicon {
+  @apply w-5 h-5 flex-shrink-0;
+  object-fit: contain;
+}
+
+.nav-icon-fallback {
+  @apply text-base flex-shrink-0;
 }
 
 .nav-name {
-  @apply text-sm font-medium;
+  @apply text-sm font-medium truncate;
+  flex: 1;
+}
+
+.nav-empty {
+  @apply flex items-center justify-center py-4;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .edit-toggle-btn {

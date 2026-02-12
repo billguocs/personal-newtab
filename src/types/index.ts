@@ -22,6 +22,12 @@ export interface WeatherData {
   weatherCode: number
   windSpeed: number
   location: string
+  forecast: {
+    date: string
+    maxTemp: number
+    minTemp: number
+    weatherCode: number
+  }[]
 }
 
 export interface LocationData {

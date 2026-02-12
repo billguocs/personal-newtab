@@ -36,7 +36,7 @@ export async function searchLocation(query: string): Promise<LocationData[]> {
 export async function getWeatherByLocation(lat: number, lon: number): Promise<WeatherData | null> {
   try {
     const response = await fetch(
-      `${WEATHER_API_URL}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto&forecast_days=1`
+      `${WEATHER_API_URL}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4`
     )
     
     if (!response.ok) {
@@ -49,12 +49,26 @@ export async function getWeatherByLocation(lat: number, lon: number): Promise<We
       return null
     }
     
+    // 处理未来三天预报（跳过今天）
+    const forecast = []
+    if (data.daily && data.daily.time) {
+      for (let i = 1; i < Math.min(4, data.daily.time.length); i++) {
+        forecast.push({
+          date: data.daily.time[i],
+          maxTemp: Math.round(data.daily.temperature_2m_max[i]),
+          minTemp: Math.round(data.daily.temperature_2m_min[i]),
+          weatherCode: data.daily.weather_code[i]
+        })
+      }
+    }
+    
     return {
       temperature: Math.round(data.current.temperature_2m),
       humidity: data.current.relative_humidity_2m,
       weatherCode: data.current.weather_code,
       windSpeed: data.current.wind_speed_10m,
-      location: `${lat.toFixed(2)}, ${lon.toFixed(2)}`
+      location: `${lat.toFixed(2)}, ${lon.toFixed(2)}`,
+      forecast: forecast
     }
   } catch (error) {
     console.error('获取天气失败:', error)

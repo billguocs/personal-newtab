@@ -92,5 +92,41 @@ export const storage = {
     await chrome.storage.local.set({
       [key]: { data, timestamp: Date.now() }
     })
+  },
+
+  // 导航链接专用持久化存储（无过期时间）
+  async getNavigationLinks<T>(): Promise<T | null | undefined> {
+    try {
+      const result = await chrome.storage.sync.get('navigationLinks')
+      console.log('Storage: 读取 navigationLinks 结果:', result)
+      // 检查是否存在该键，而不是检查值是否为 truthy（空数组会被误判）
+      if ('navigationLinks' in result) {
+        const value = result.navigationLinks
+        console.log('Storage: 找到 navigationLinks，值为:', value, '类型:', typeof value)
+        
+        // 处理可能的历史数据格式（如果之前用 setCachedData 保存的，会有 data 和 timestamp 字段）
+        if (value && typeof value === 'object' && 'data' in value && Array.isArray(value.data)) {
+          console.log('Storage: 检测到旧格式数据，提取数组:', value.data)
+          return value.data
+        }
+        
+        return value
+      }
+      console.log('Storage: 未找到 navigationLinks 键')
+      return null
+    } catch (error) {
+      console.error('Storage: 读取导航链接失败', error)
+      return null
+    }
+  },
+
+  async setNavigationLinks<T>(data: T): Promise<void> {
+    try {
+      await chrome.storage.sync.set({ navigationLinks: data })
+      console.log('Storage: 导航链接已保存', data)
+    } catch (error) {
+      console.error('Storage: 保存导航链接失败', error)
+      throw error
+    }
   }
 }
