@@ -38,7 +38,15 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   async function loadBingWallpaper() {
-    bingWallpaper.value = await getWallpaper()
+    const cached = await storage.getCachedData<BingImage>('bingWallpaper')
+    if (cached) {
+      bingWallpaper.value = cached
+      return
+    }
+    const wallpaper = await getWallpaper()
+    if (wallpaper) {
+      bingWallpaper.value = wallpaper
+    }
   }
 
   async function saveSettings() {

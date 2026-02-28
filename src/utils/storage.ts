@@ -128,5 +128,29 @@ export const storage = {
       console.error('Storage: 保存导航链接失败', error)
       throw error
     }
+  },
+
+  async getFavicon(url: string): Promise<string | null> {
+    try {
+      const result = await chrome.storage.local.get('faviconCache')
+      const cache = result.faviconCache || {}
+      if (cache[url]) {
+        return cache[url]
+      }
+      return null
+    } catch {
+      return null
+    }
+  },
+
+  async setFavicon(url: string, faviconUrl: string): Promise<void> {
+    try {
+      const result = await chrome.storage.local.get('faviconCache')
+      const cache = result.faviconCache || {}
+      cache[url] = faviconUrl
+      await chrome.storage.local.set({ faviconCache: cache })
+    } catch (error) {
+      console.error('Storage: 保存 favicon 失败', error)
+    }
   }
 }

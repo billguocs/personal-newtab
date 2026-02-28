@@ -5,17 +5,6 @@
       :style="backgroundStyle"
     ></div>
     <div class="wallpaper-overlay"></div>
-    
-    <button 
-      class="wallpaper-settings-btn"
-      @click.stop="showSettings = !showSettings"
-      title="壁纸设置"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-        <circle cx="12" cy="12" r="3"/>
-      </svg>
-    </button>
 
     <!-- 遮罩层 -->
     <div 
@@ -117,19 +106,49 @@ async function handleFileUpload(event: Event) {
   const file = target.files?.[0]
   
   if (file) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string
-      if (dataUrl) {
-        settingsStore.setCustomWallpaper(dataUrl)
-      }
+    const compressedDataUrl = await compressImage(file)
+    if (compressedDataUrl) {
+      settingsStore.setCustomWallpaper(compressedDataUrl)
     }
-    reader.readAsDataURL(file)
   }
-  // 清空 input 以便可以再次选择同一文件
   if (target) {
     target.value = ''
   }
+}
+
+function compressImage(file: File, maxWidth = 1920, maxHeight = 1080, quality = 0.8): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let { width, height } = img
+        
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height)
+          resolve(canvas.toDataURL('image/jpeg', quality))
+        } else {
+          resolve(e.target?.result as string)
+        }
+      }
+      img.onerror = () => {
+        resolve(e.target?.result as string)
+      }
+      img.src = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  })
 }
 
 function removeCustomWallpaper() {

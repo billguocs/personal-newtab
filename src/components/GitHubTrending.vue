@@ -1,5 +1,5 @@
 <template>
-  <div class="hot-list-widget">
+  <div ref="widgetRef" class="hot-list-widget">
     <div class="widget-header">
       <h3 class="widget-title">
         <span class="icon">🐙</span>
@@ -69,16 +69,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useHotListStore } from '@/stores/hotlist'
 import { formatNumber } from '@/utils/helpers'
 
 const hotlistStore = useHotListStore()
+const widgetRef = ref<HTMLElement>()
+const hasLoaded = ref(false)
 
 const period = ref<'day' | 'week' | 'month'>('day')
 
+function loadIfVisible() {
+  if (!hasLoaded.value) {
+    hasLoaded.value = true
+    hotlistStore.loadGitHubTrending(period.value)
+  }
+}
+
+let observer: IntersectionObserver | null = null
+
 onMounted(() => {
-  hotlistStore.loadGitHubTrending(period.value)
+  if (widgetRef.value) {
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadIfVisible()
+        }
+      },
+      { rootMargin: '100px' }
+    )
+    observer.observe(widgetRef.value)
+  }
+})
+
+onUnmounted(() => {
+  observer?.disconnect()
 })
 
 function onPeriodChange() {

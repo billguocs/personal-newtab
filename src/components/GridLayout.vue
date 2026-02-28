@@ -18,12 +18,12 @@
     <div
       v-for="widget in layoutStore.visibleWidgets"
       :key="widget.id"
-      :class="['grid-item', { editing: layoutStore.isEditing, dragging: draggingId === widget.id }]"
+      :class="['grid-item', { editing: layoutStore.isEditing, dragging: draggingId === widget.id, 'is-search': widget.type === 'search' }]"
       :style="getItemStyle(widget)"
       :data-id="widget.id"
       :data-type="widget.type"
     >
-      <div class="widget-wrapper widget-container">
+      <div :class="widget.type === 'search' ? 'widget-wrapper widget-transparent' : 'widget-wrapper widget-container'">
         <div 
           v-if="layoutStore.isEditing" 
           class="drag-handle"
@@ -52,14 +52,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { useLayoutStore } from '@/stores/layout'
 import type { Widget } from '@/types'
-import SearchBox from './SearchBox.vue'
-import GitHubTrending from './GitHubTrending.vue'
-import ZhihuHot from './ZhihuHot.vue'
-import V2exHot from './V2exHot.vue'
-import Navigation from './Navigation.vue'
+
+const SearchBox = defineAsyncComponent(() => import('./SearchBox.vue'))
+const GitHubTrending = defineAsyncComponent(() => import('./GitHubTrending.vue'))
+const ZhihuHot = defineAsyncComponent(() => import('./ZhihuHot.vue'))
+const V2exHot = defineAsyncComponent(() => import('./V2exHot.vue'))
+const Navigation = defineAsyncComponent(() => import('./Navigation.vue'))
 
 const layoutStore = useLayoutStore()
 const gridContainer = ref<HTMLElement>()
@@ -229,6 +230,8 @@ onUnmounted(() => {
 .grid-item {
   @apply relative;
   transition: all 0.2s ease;
+  background: transparent;
+  border-radius: 16px;
 }
 
 .grid-item.editing {
@@ -242,6 +245,16 @@ onUnmounted(() => {
 .widget-wrapper {
   @apply h-full flex flex-col;
   position: relative;
+  border-radius: 16px;
+}
+
+.widget-transparent {
+  background: transparent;
+}
+
+.widget-container {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   opacity: var(--widget-opacity, 0.85);
 }
 

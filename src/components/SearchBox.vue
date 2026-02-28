@@ -103,16 +103,7 @@ function handleSearch() {
 .search-widget {
   @apply w-full p-6 rounded-2xl;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: none;
-  transition: all 0.3s ease;
-}
-
-.search-widget:hover {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .search-mode-toggle {
@@ -121,13 +112,13 @@ function handleSearch() {
 
 .mode-btn {
   @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200;
-  background: rgba(255, 255, 255, 0.2);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .mode-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .mode-btn.active {
@@ -146,30 +137,33 @@ function handleSearch() {
 
 .search-input {
   @apply w-full px-5 py-3 pr-12 rounded-xl text-base outline-none transition-all duration-200;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
 .search-input::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.7;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .search-input:focus {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.35);
   border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 .search-btn {
   @apply absolute right-3 p-2 rounded-full transition-all duration-200;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.8);
 }
 
-.search-btn:hover {
-  background: var(--bg-secondary);
-  color: var(--accent-color);
+.engine-btn.active,
+.ai-btn.active {
+  background: var(--accent-color);
+  color: white;
+}
+
+.ai-icon {
+  @apply mr-1;
 }
 
 .engine-selector,
@@ -180,24 +174,13 @@ function handleSearch() {
 .engine-btn,
 .ai-btn {
   @apply px-3 py-1.5 rounded-lg text-sm transition-all duration-200;
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .engine-btn:hover,
 .ai-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.engine-btn.active,
-.ai-btn.active {
-  background: var(--accent-color);
-  color: white;
-  border-color: var(--accent-color);
-}
-
-.ai-icon {
-  @apply mr-1;
+  background: rgba(255, 255, 255, 0.3);
 }
 </style>

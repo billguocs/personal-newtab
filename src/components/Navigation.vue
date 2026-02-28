@@ -148,6 +148,7 @@ const showBookmarkPanel = ref(false)
 const bookmarkLoading = ref(false)
 const availableBookmarks = ref<{id: string, title: string, url: string}[]>([])
 const selectedBookmarks = ref<{id: string, title: string, url: string}[]>([])
+const faviconCache = ref<Record<string, string>>({})
 
 // 默认导航数据
 const defaultLinks: NavigationLink[] = [
@@ -162,10 +163,20 @@ const defaultLinks: NavigationLink[] = [
 function getFaviconUrl(url: string): string {
   try {
     const domain = new URL(url).hostname
-    // 使用 Google Favicon API
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+    return faviconCache.value[domain] || `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
   } catch {
     return ''
+  }
+}
+
+async function loadFaviconCache() {
+  try {
+    const result = await chrome.storage.local.get('faviconCache')
+    if (result.faviconCache) {
+      faviconCache.value = result.faviconCache
+    }
+  } catch (error) {
+    console.error('加载 favicon 缓存失败', error)
   }
 }
 
@@ -356,6 +367,7 @@ watch(showBookmarkPanel, (newVal) => {
 })
 
 onMounted(() => {
+  loadFaviconCache()
   loadNavLinks()
   console.log('Navigation 组件已加载，链接数:', navLinks.value.length)
 })
@@ -364,17 +376,15 @@ onMounted(() => {
 <style scoped>
 .navigation-widget {
   @apply relative;
-  background: transparent;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 12px;
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
 }
 
 .navigation-widget:hover {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: var(--glass-bg);
+  border-color: var(--accent-color);
 }
 
 .nav-links {

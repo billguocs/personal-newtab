@@ -11,29 +11,38 @@ import { formatTime, formatDate } from '@/utils/helpers'
 
 const time = ref('')
 const date = ref('')
-let timer: number
+let rafId: number | null = null
+let lastSecond = -1
 
 function update() {
   const now = new Date()
-  time.value = formatTime(now)
-  date.value = formatDate(now)
+  const currentSecond = now.getSeconds()
+  
+  if (currentSecond !== lastSecond) {
+    lastSecond = currentSecond
+    time.value = formatTime(now)
+    date.value = formatDate(now)
+  }
+  
+  rafId = requestAnimationFrame(update)
 }
 
 onMounted(() => {
   update()
-  timer = window.setInterval(update, 1000)
 })
 
 onUnmounted(() => {
-  clearInterval(timer)
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+  }
 })
 </script>
 
 <style scoped>
 .clock-widget {
   @apply text-center;
-  color: white;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  color: #ffffff;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 0, 0, 0.4);
 }
 
 .time {
@@ -41,6 +50,7 @@ onUnmounted(() => {
 }
 
 .date {
-  @apply text-xl mt-2 opacity-90;
+  @apply text-xl mt-2;
+  color: rgba(255, 255, 255, 0.9);
 }
 </style>

@@ -190,8 +190,8 @@ async function refreshWeather() {
   }
 }
 
-onMounted(() => {
-  loadSavedLocation()
+onMounted(async () => {
+  await loadSavedLocation()
   if (!selectedLocation.value) {
     getLocationWeather()
   }
@@ -215,14 +215,10 @@ onMounted(() => {
 
 .weather-content {
   @apply flex items-center gap-4 p-3 rounded-xl transition-all duration-200;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .weather-content:hover {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .weather-main {
@@ -275,12 +271,11 @@ onMounted(() => {
 .weather-error {
   @apply flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all duration-200;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--text-secondary);
 }
 
 .weather-error:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .icon {

@@ -1,5 +1,5 @@
 <template>
-  <div class="hot-list-widget">
+  <div ref="widgetRef" class="hot-list-widget">
     <div class="widget-header">
       <h3 class="widget-title">
         <span class="icon">💬</span>
@@ -61,13 +61,38 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useHotListStore } from '@/stores/hotlist'
 
 const hotlistStore = useHotListStore()
+const widgetRef = ref<HTMLElement>()
+const hasLoaded = ref(false)
+
+function loadIfVisible() {
+  if (!hasLoaded.value) {
+    hasLoaded.value = true
+    hotlistStore.loadV2exHot()
+  }
+}
+
+let observer: IntersectionObserver | null = null
 
 onMounted(() => {
-  hotlistStore.loadV2exHot()
+  if (widgetRef.value) {
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadIfVisible()
+        }
+      },
+      { rootMargin: '100px' }
+    )
+    observer.observe(widgetRef.value)
+  }
+})
+
+onUnmounted(() => {
+  observer?.disconnect()
 })
 
 function refresh() {

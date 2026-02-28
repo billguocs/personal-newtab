@@ -54,14 +54,14 @@ onUnmounted(() => {
 
 .time {
   @apply text-5xl font-bold tracking-tight;
-  color: white;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  color: #ffffff;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 0, 0, 0.4);
 }
 
 .date {
-  @apply text-base mt-1 opacity-90;
-  color: white;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  @apply text-base mt-1;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
 .weather-section {
