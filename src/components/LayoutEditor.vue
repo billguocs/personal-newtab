@@ -18,19 +18,30 @@
 
       <div class="editor-content">
         <div class="widgets-panel">
-          <div class="panel-title">组件列表（点击切换显示/隐藏）</div>
-          <div class="widget-list">
+          <div class="panel-title">组件列表（拖拽调整顺序，点击切换显示/隐藏）</div>
+          <VueDraggable
+            v-model="widgetsList"
+            class="widget-list"
+            :animation="150"
+            handle=".drag-handle"
+            @end="onWidgetDragEnd"
+          >
             <div
-              v-for="widget in layoutStore.layout.widgets"
+              v-for="widget in widgetsList"
               :key="widget.id"
               :class="['widget-item', { visible: widget.visible }]"
-              @click="toggleWidget(widget.id)"
             >
+              <span class="drag-handle">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
+                  <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+                </svg>
+              </span>
               <span class="widget-icon">{{ getWidgetIcon(widget.type) }}</span>
               <span class="widget-name">{{ widget.title }}</span>
-              <span class="toggle-indicator">{{ widget.visible ? '显示' : '隐藏' }}</span>
+              <span class="toggle-indicator" @click.stop="toggleWidget(widget.id)">{{ widget.visible ? '显示' : '隐藏' }}</span>
             </div>
-          </div>
+          </VueDraggable>
         </div>
 
         <div class="opacity-panel">
@@ -136,12 +147,22 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { VueDraggable } from 'vue-draggable-plus'
 import { useLayoutStore } from '@/stores/layout'
 import { useSettingsStore } from '@/stores/settings'
 
 const layoutStore = useLayoutStore()
 const settingsStore = useSettingsStore()
+
+const widgetsList = computed({
+  get: () => layoutStore.layout.widgets,
+  set: (val) => layoutStore.updateWidgetOrder(val)
+})
+
+function onWidgetDragEnd() {
+  layoutStore.saveLayout()
+}
 
 // 壁纸设置相关
 const showWallpaperSettings = ref(false)
@@ -312,16 +333,29 @@ onUnmounted(() => {
   color: white;
 }
 
+.drag-handle {
+  @apply cursor-grab p-1 rounded;
+  color: var(--text-secondary);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-handle:hover {
+  background: var(--border-color);
+}
+
 .widget-icon {
   @apply text-lg;
 }
 
 .widget-name {
-  @apply text-sm;
+  @apply text-sm flex-1;
 }
 
 .toggle-indicator {
-  @apply ml-2 text-xs;
+  @apply ml-2 text-xs px-2 py-1 rounded;
 }
 
 .editor-tip {

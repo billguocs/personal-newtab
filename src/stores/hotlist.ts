@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { GitHubRepo, ZhihuItem, V2exTopic } from '@/types'
+import type { GitHubRepo, GitHubQueryOptions, ZhihuItem, V2exTopic } from '@/types'
 import { getGitHubTrending } from '@/api/github'
 import { getZhihuHot } from '@/api/zhihu'
 import { getV2exHot } from '@/api/v2ex'
@@ -20,14 +20,19 @@ export const useHotListStore = defineStore('hotlist', () => {
     v2ex: ''
   })
 
-  async function loadGitHubTrending(period: 'day' | 'week' | 'month' = 'day', force = false) {
+  async function loadGitHubTrending(options: Partial<GitHubQueryOptions> = {}, force = false) {
     if (loading.value.github) return
+    
+    const queryOptions: GitHubQueryOptions = {
+      period: options.period || 'day',
+      language: options.language || 'all'
+    }
     
     loading.value.github = true
     error.value.github = ''
     
     try {
-      const repos = await getGitHubTrending(period, force)
+      const repos = await getGitHubTrending(queryOptions, force)
       if (repos.length === 0 && !force) {
         error.value.github = '获取失败，请稍后重试'
       } else {
@@ -89,7 +94,7 @@ export const useHotListStore = defineStore('hotlist', () => {
   }
 
   function refreshAll() {
-    loadGitHubTrending('day', true)
+    loadGitHubTrending({ period: 'day' }, true)
     loadZhihuHot(true)
     loadV2exHot(true)
   }

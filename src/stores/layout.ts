@@ -121,6 +121,10 @@ export const useLayoutStore = defineStore('layout', () => {
     layout.value.widgetOpacity = opacity
   }
 
+  function updateWidgetOrder(newWidgets: typeof layout.value.widgets) {
+    layout.value.widgets = newWidgets
+  }
+
   return {
     layout,
     isEditing,
@@ -136,6 +140,7 @@ export const useLayoutStore = defineStore('layout', () => {
     startEditing,
     stopEditing,
     setContainerWidth,
-    updateWidgetOpacity
+    updateWidgetOpacity,
+    updateWidgetOrder
   }
 })

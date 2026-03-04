@@ -2,14 +2,29 @@
   <div ref="widgetRef" class="hot-list-widget">
     <div class="widget-header">
       <h3 class="widget-title">
-        <span class="icon">🐙</span>
+        <img class="site-icon" src="https://github.com/favicon.ico" alt="GitHub" />
         {{ "GitHub趋势" }}
       </h3>
       <div class="widget-actions">
-        <select v-model="period" @change="onPeriodChange" class="period-select">
+        <select v-model="period" @change="onQueryChange" class="period-select">
           <option value="day">{{ "今日" }}</option>
           <option value="week">{{ "本周" }}</option>
           <option value="month">{{ "本月" }}</option>
+        </select>
+        <select v-model="language" @change="onQueryChange" class="period-select">
+          <option value="all">{{ "全部语言" }}</option>
+          <option value="javascript">JavaScript</option>
+          <option value="python">Python</option>
+          <option value="go">Go</option>
+          <option value="rust">Rust</option>
+          <option value="java">Java</option>
+          <option value="typescript">TypeScript</option>
+          <option value="cpp">C++</option>
+          <option value="c">C</option>
+          <option value="csharp">C#</option>
+          <option value="php">PHP</option>
+          <option value="swift">Swift</option>
+          <option value="kotlin">Kotlin</option>
         </select>
         <button 
           class="refresh-btn"
@@ -78,11 +93,12 @@ const widgetRef = ref<HTMLElement>()
 const hasLoaded = ref(false)
 
 const period = ref<'day' | 'week' | 'month'>('day')
+const language = ref('all')
 
 function loadIfVisible() {
   if (!hasLoaded.value) {
     hasLoaded.value = true
-    hotlistStore.loadGitHubTrending(period.value)
+    hotlistStore.loadGitHubTrending({ period: period.value, language: language.value })
   }
 }
 
@@ -106,12 +122,12 @@ onUnmounted(() => {
   observer?.disconnect()
 })
 
-function onPeriodChange() {
-  hotlistStore.loadGitHubTrending(period.value, true)
+function onQueryChange() {
+  hotlistStore.loadGitHubTrending({ period: period.value, language: language.value }, true)
 }
 
 function refresh() {
-  hotlistStore.loadGitHubTrending(period.value, true)
+  hotlistStore.loadGitHubTrending({ period: period.value, language: language.value }, true)
 }
 </script>
 
@@ -121,7 +137,7 @@ function refresh() {
 }
 
 .widget-header {
-  @apply flex items-center justify-between p-4 border-b;
+  @apply flex flex-wrap items-center justify-between gap-2 p-4 border-b;
   border-color: var(--border-color);
 }
 
@@ -134,15 +150,20 @@ function refresh() {
   @apply text-xl;
 }
 
+.site-icon {
+  @apply w-5 h-5 inline-block align-middle;
+}
+
 .widget-actions {
-  @apply flex items-center gap-2;
+  @apply flex flex-wrap items-center gap-2;
 }
 
 .period-select {
-  @apply px-2 py-1 rounded-lg text-sm outline-none;
+  @apply px-2 py-1 rounded-lg text-xs outline-none;
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
+  min-width: 70px;
 }
 
 .refresh-btn {
@@ -194,7 +215,7 @@ function refresh() {
 }
 
 .repo-list {
-  @apply space-y-2;
+  @apply space-y-1;
 }
 
 .repo-item {

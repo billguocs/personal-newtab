@@ -34,25 +34,38 @@
       </div>
       
       <div class="nav-list">
-        <div 
-          v-for="(link, index) in navLinks" 
-          :key="link.id"
-          class="nav-edit-item"
+        <VueDraggable
+          v-model="navLinks"
+          :animation="150"
+          handle=".nav-drag-handle"
+          @end="onNavDragEnd"
         >
-          <input 
-            v-model="link.name"
-            type="text"
-            placeholder="名称"
-            class="name-input"
-          />
-          <input 
-            v-model="link.url"
-            type="text"
-            placeholder="https://..."
-            class="url-input"
-          />
-          <button class="delete-btn" @click="removeLink(index)">🗑️</button>
-        </div>
+          <div 
+            v-for="(link, index) in navLinks" 
+            :key="link.id"
+            class="nav-edit-item"
+          >
+            <span class="nav-drag-handle">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
+                <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+              </svg>
+            </span>
+            <input 
+              v-model="link.name"
+              type="text"
+              placeholder="名称"
+              class="name-input"
+            />
+            <input 
+              v-model="link.url"
+              type="text"
+              placeholder="https://..."
+              class="url-input"
+            />
+            <button class="delete-btn" @click="removeLink(index)">🗑️</button>
+          </div>
+        </VueDraggable>
       </div>
 
       <button 
@@ -138,6 +151,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { VueDraggable } from 'vue-draggable-plus'
 import type { NavigationLink } from '@/types'
 import { storage } from '@/utils/storage'
 
@@ -274,6 +288,10 @@ function addLink() {
       icon: ''
     })
   }
+}
+
+function onNavDragEnd() {
+  saveToStorage()
 }
 
 async function removeLink(index: number) {
@@ -485,6 +503,15 @@ onMounted(() => {
 
 .nav-edit-item {
   @apply flex gap-2 items-center;
+}
+
+.nav-drag-handle {
+  @apply cursor-grab p-1 rounded flex-shrink-0;
+  color: var(--text-secondary);
+}
+
+.nav-drag-handle:active {
+  cursor: grabbing;
 }
 
 .name-input {

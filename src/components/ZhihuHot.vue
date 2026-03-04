@@ -2,7 +2,7 @@
   <div ref="widgetRef" class="hot-list-widget">
     <div class="widget-header">
       <h3 class="widget-title">
-        <span class="icon">💡</span>
+        <img class="site-icon" src="https://www.zhihu.com/favicon.ico" alt="知乎" />
         {{ "知乎热榜" }}
       </h3>
       <button 
@@ -114,6 +114,10 @@ function refresh() {
   @apply text-xl;
 }
 
+.site-icon {
+  @apply w-5 h-5 inline-block align-middle;
+}
+
 .refresh-btn {
   @apply p-2 rounded-lg transition-all duration-200;
   color: var(--text-secondary);
@@ -163,7 +167,7 @@ function refresh() {
 }
 
 .hot-list {
-  @apply space-y-2;
+  @apply space-y-1;
 }
 
 .hot-item {

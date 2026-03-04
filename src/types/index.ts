@@ -75,6 +75,11 @@ export interface GitHubRepo {
   language: string
 }
 
+export interface GitHubQueryOptions {
+  period: 'day' | 'week' | 'month'
+  language: string
+}
+
 export interface ZhihuItem {
   title: string
   url: string

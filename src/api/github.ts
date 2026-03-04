@@ -1,11 +1,12 @@
-import type { GitHubRepo } from '@/types'
+import type { GitHubRepo, GitHubQueryOptions } from '@/types'
 import { storage } from '@/utils/storage'
 
 const CACHE_KEY = 'githubTrending'
 const API_URL = 'https://api.github.com/search/repositories'
 
-export async function fetchGitHubTrending(period: 'day' | 'week' | 'month' = 'day'): Promise<GitHubRepo[]> {
+export async function fetchGitHubTrending(options: GitHubQueryOptions): Promise<GitHubRepo[]> {
   try {
+    const { period, language } = options
     const date = new Date()
     let createdQuery = ''
     
@@ -22,6 +23,10 @@ export async function fetchGitHubTrending(period: 'day' | 'week' | 'month' = 'da
     }
     
     createdQuery = `created:>${date.toISOString().split('T')[0]}`
+    
+    if (language && language !== 'all') {
+      createdQuery += ` language:${language}`
+    }
     
     const response = await fetch(
       `${API_URL}?q=${encodeURIComponent(createdQuery)}&sort=stars&order=desc&per_page=10`
@@ -47,21 +52,23 @@ export async function fetchGitHubTrending(period: 'day' | 'week' | 'month' = 'da
   }
 }
 
-export async function getGitHubTrending(period: 'day' | 'week' | 'month' = 'day', force = false): Promise<GitHubRepo[]> {
-  // 如果不是强制刷新，先检查缓存
+export async function getGitHubTrending(options: GitHubQueryOptions, force = false): Promise<GitHubRepo[]> {
+  const { period, language } = options
+  const cacheKey = `${CACHE_KEY}_${period}_${language}`
+  
   if (!force) {
-    const cached = await storage.getCachedData<GitHubRepo[]>(`${CACHE_KEY}_${period}`)
+    const cached = await storage.getCachedData<GitHubRepo[]>(cacheKey)
     if (cached) {
-      console.log(`[GitHub] 使用缓存数据 (${period})`)
+      console.log(`[GitHub] 使用缓存数据 (${period}, ${language})`)
       return cached
     }
   }
 
-  console.log(`[GitHub] 从网络获取数据 (${period})`)
-  const repos = await fetchGitHubTrending(period)
+  console.log(`[GitHub] 从网络获取数据 (${period}, ${language})`)
+  const repos = await fetchGitHubTrending(options)
   if (repos.length > 0) {
-    await storage.setCachedData(`${CACHE_KEY}_${period}`, repos)
-    console.log(`[GitHub] 数据已缓存 (${period})`)
+    await storage.setCachedData(cacheKey, repos)
+    console.log(`[GitHub] 数据已缓存 (${period}, ${language})`)
   }
   return repos
 }
