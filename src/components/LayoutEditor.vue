@@ -174,7 +174,9 @@ function getWidgetIcon(type: string): string {
     github: '🐙',
     zhihu: '💡',
     v2ex: '💬',
-    navigation: '🔗'
+    navigation: '🔗',
+    poetry: '📜',
+    stock: '📈'
   }
   return icons[type] || '📦'
 }

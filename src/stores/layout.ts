@@ -9,7 +9,9 @@ const DEFAULT_LAYOUT: LayoutConfig = {
     { id: 'navigation', type: 'navigation', title: '快速导航', x: 2, y: 8, w: 8, h: 3, visible: true },
     { id: 'github', type: 'github', title: 'GitHub趋势', x: 0, y: 12, w: 4, h: 8, visible: true },
     { id: 'zhihu', type: 'zhihu', title: '知乎热榜', x: 4, y: 12, w: 4, h: 8, visible: true },
-    { id: 'v2ex', type: 'v2ex', title: 'V2EX热议', x: 8, y: 12, w: 4, h: 8, visible: true }
+    { id: 'v2ex', type: 'v2ex', title: 'V2EX热议', x: 8, y: 12, w: 4, h: 8, visible: true },
+    { id: 'poetry', type: 'poetry', title: '每日诗词', x: 0, y: 20, w: 6, h: 6, visible: true },
+    { id: 'stock', type: 'stock', title: '股票监控', x: 6, y: 20, w: 6, h: 6, visible: true }
   ],
   gridCols: 12,
   gridRowHeight: 45,

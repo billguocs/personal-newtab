@@ -61,6 +61,8 @@ const GitHubTrending = defineAsyncComponent(() => import('./GitHubTrending.vue')
 const ZhihuHot = defineAsyncComponent(() => import('./ZhihuHot.vue'))
 const V2exHot = defineAsyncComponent(() => import('./V2exHot.vue'))
 const Navigation = defineAsyncComponent(() => import('./Navigation.vue'))
+const Poetry = defineAsyncComponent(() => import('./Poetry.vue'))
+const StockMonitor = defineAsyncComponent(() => import('./StockMonitor.vue'))
 
 const layoutStore = useLayoutStore()
 const gridContainer = ref<HTMLElement>()
@@ -99,7 +101,9 @@ function getWidgetComponent(type: string) {
     github: GitHubTrending,
     zhihu: ZhihuHot,
     v2ex: V2exHot,
-    navigation: Navigation
+    navigation: Navigation,
+    poetry: Poetry,
+    stock: StockMonitor
   }
   return components[type] || 'div'
 }

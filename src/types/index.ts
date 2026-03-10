@@ -1,6 +1,6 @@
 export interface Widget {
   id: string
-  type: 'search' | 'github' | 'zhihu' | 'v2ex' | 'navigation'
+  type: 'search' | 'github' | 'zhihu' | 'v2ex' | 'navigation' | 'poetry' | 'stock'
   title: string
   x: number
   y: number
@@ -78,6 +78,24 @@ export interface GitHubRepo {
 export interface GitHubQueryOptions {
   period: 'day' | 'week' | 'month'
   language: string
+}
+
+export interface PoetryItem {
+  content: string
+  author: string
+  title: string
+  category: string
+}
+
+export interface StockItem {
+  symbol: string
+  name: string
+  price: number
+  prevClose: number
+  change: number
+  changePercent: number
+  market: 'A' | 'HK' | 'US'
+  lastUpdate: number
 }
 
 export interface ZhihuItem {
