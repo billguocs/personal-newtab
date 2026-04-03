@@ -3,16 +3,19 @@
     <div v-if="poetryStore.loading" class="loading">
       <div class="spinner"></div>
     </div>
-    
+
     <div v-else-if="poetryStore.error" class="error">
       <p>{{ poetryStore.error }}</p>
     </div>
-    
+
     <div v-else-if="poetryStore.currentPoetry" class="poetry-content">
-      <div class="poetry-text">{{ poetryStore.currentPoetry.content }}</div>
+      <!-- 标题和作者 -->
       <div class="poetry-meta">
-        {{ poetryStore.currentPoetry.author }} · {{ poetryStore.currentPoetry.title }}
+        <span class="poetry-title">{{ poetryStore.currentPoetry.title }}</span>
+        <span class="poetry-author">{{ poetryStore.currentPoetry.author }}</span>
       </div>
+      <!-- 诗词内容 - 自动换列 -->
+      <div class="poetry-text">{{ poetryStore.currentPoetry.content }}</div>
     </div>
   </div>
 </template>
@@ -30,7 +33,7 @@ onMounted(() => {
 
 <style scoped>
 .poetry-widget {
-  @apply h-full flex items-center justify-center p-6;
+  @apply h-full flex items-center justify-center;
   background: linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.5) 100%);
   border-radius: 16px;
   position: relative;
@@ -53,18 +56,53 @@ onMounted(() => {
 }
 
 .poetry-content {
-  @apply text-center;
+  display: flex;
+  flex-direction: row-reverse;
   color: white;
-}
-
-.poetry-text {
-  @apply text-2xl md:text-3xl lg:text-4xl font-medium leading-relaxed mb-4;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 0, 0, 0.4);
-  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', serif;
+  height: 100%;
+  padding: 12px;
+  gap: 8px;
 }
 
 .poetry-meta {
-  @apply text-sm md:text-base opacity-80;
+  writing-mode: vertical-rl;
+  font-size: 12px;
+  opacity: 0.85;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.poetry-title {
+  font-weight: 600;
+}
+
+.poetry-author {
+  opacity: 0.9;
+}
+
+.poetry-text {
+  writing-mode: vertical-rl;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.8;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 0, 0, 0.4);
+  font-family: 'ZCOOL XiaoWei', 'Ma Shan Zheng', 'ZCOOL QingKe HuangYou', 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', serif;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 响应式字体大小 */
+@media (min-width: 768px) {
+  .poetry-text {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .poetry-text {
+    font-size: 18px;
+  }
 }
 </style>

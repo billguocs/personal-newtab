@@ -1,10 +1,10 @@
 <template>
-  <div class="new-tab-page">
+  <div :class="['new-tab-page', { 'editing-mode': layoutStore.isEditing }]">
     <Wallpaper />
-    
-    <div class="main-content">
-      <ClockWeather v-if="settingsStore.settings.showClock" />
-      
+
+    <EditModeIndicator />
+
+    <div class="main-content" :class="{ 'editing': layoutStore.isEditing }">
       <!-- 只有在布局加载完成后才渲染 GridLayout -->
       <GridLayout v-if="layoutStore.visibleWidgets.length > 0" />
       
@@ -15,42 +15,48 @@
       </div>
     </div>
     
-    <LayoutEditor ref="layoutEditorRef" />
-    
-    <!-- 右侧按钮组 -->
-    <div v-if="!layoutStore.isEditing" class="right-actions">
-      <!-- 壁纸设置按钮 -->
-      <button 
-        class="action-btn"
-        @click="showWallpaperSettings = true"
-        title="壁纸设置"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-          <circle cx="9" cy="9" r="2"/>
-          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-        </svg>
-        <span>壁纸设置</span>
-      </button>
-      
-      <!-- 编辑布局按钮 -->
-      <button 
-        class="action-btn"
-        @click="layoutStore.startEditing()"
-        title="编辑布局"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="9" cy="12" r="1"/>
-          <circle cx="9" cy="5" r="1"/>
-          <circle cx="9" cy="19" r="1"/>
-          <circle cx="15" cy="12" r="1"/>
-          <circle cx="15" cy="5" r="1"/>
-          <circle cx="15" cy="19" r="1"/>
-        </svg>
-        <span>编辑布局</span>
-      </button>
+    <!-- 右侧独立按钮 - 每个按钮单独定位，互不干扰 -->
+    <div v-if="!layoutStore.isEditing" class="setting-btn-container" style="bottom: 108px;">
+      <SettingButton text="主题设置" @click="showThemeSelector = true">
+        <template #icon>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+        </template>
+      </SettingButton>
+    </div>
+
+    <div v-if="!layoutStore.isEditing" class="setting-btn-container" style="bottom: 64px;">
+      <SettingButton text="壁纸设置" @click="showWallpaperSettings = true">
+        <template #icon>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+            <circle cx="9" cy="9" r="2"/>
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+          </svg>
+        </template>
+      </SettingButton>
+    </div>
+
+    <div v-if="!layoutStore.isEditing" class="setting-btn-container" style="bottom: 20px;">
+      <SettingButton text="编辑布局" @click="layoutStore.startEditing()">
+        <template #icon>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="12" r="1"/>
+            <circle cx="9" cy="5" r="1"/>
+            <circle cx="9" cy="19" r="1"/>
+            <circle cx="15" cy="12" r="1"/>
+            <circle cx="15" cy="5" r="1"/>
+            <circle cx="15" cy="19" r="1"/>
+          </svg>
+        </template>
+      </SettingButton>
     </div>
     
+    <!-- 主题选择器 -->
+    <ThemeSelector :show="showThemeSelector" @close="showThemeSelector = false" />
+
     <!-- 壁纸设置面板 -->
     <div v-if="showWallpaperSettings" class="wallpaper-settings-overlay" @click.self="showWallpaperSettings = false">
       <div class="wallpaper-settings-panel">
@@ -120,20 +126,26 @@ import { useSettingsStore } from '@/stores/settings'
 import { useLayoutStore } from '@/stores/layout'
 import { useHotListStore } from '@/stores/hotlist'
 import Wallpaper from '@/components/Wallpaper.vue'
-import ClockWeather from '@/components/ClockWeather.vue'
 import GridLayout from '@/components/GridLayout.vue'
-import LayoutEditor from '@/components/LayoutEditor.vue'
+import SettingButton from '@/components/SettingButton.vue'
+import EditModeIndicator from '@/components/EditModeIndicator.vue'
+import ThemeSelector from '@/components/ThemeSelector.vue'
+import { useThemeStore } from '@/stores/theme'
 
 
 const settingsStore = useSettingsStore()
 const layoutStore = useLayoutStore()
 const hotlistStore = useHotListStore()
+const themeStore = useThemeStore()
 
 const isLoaded = ref(false)
 
 // 壁纸设置
 const showWallpaperSettings = ref(false)
 const wallpaperUrlInput = ref('')
+
+// 主题设置
+const showThemeSelector = ref(false)
 
 function handleFileUpload(event: Event) {
   const target = event.target as HTMLInputElement
@@ -182,8 +194,14 @@ onMounted(async () => {
   await layoutStore.loadLayout()
   await settingsStore.loadSettings()
   await hotlistStore.loadAll()
+  await themeStore.loadTheme()
   isLoaded.value = true
-  
+
+  // 如果有当前壁纸，自动提取主题
+  if (settingsStore.currentWallpaper) {
+    themeStore.extractFromWallpaper(settingsStore.currentWallpaper)
+  }
+
   // 调试信息
   console.log('布局加载完成:', layoutStore.layout)
   console.log('可见组件数:', layoutStore.visibleWidgets.length)
@@ -199,10 +217,15 @@ onMounted(async () => {
   color: var(--text-primary, #1a1a1a);
 }
 
+.main-content.editing {
+  position: relative;
+  z-index: 40;
+}
+
 .main-content {
   position: relative;
   z-index: 10;
-  padding: 2rem 1rem;
+  padding: 0;
 }
 
 .no-widgets-hint {
@@ -234,39 +257,13 @@ onMounted(async () => {
   opacity: 0.9;
 }
 
-/* 右侧按钮组 */
-.right-actions {
+/* 独立按钮容器 - 每个按钮单独定位，互不干扰 */
+.setting-btn-container {
   position: fixed;
-  bottom: 20px;
   right: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   z-index: 40;
 }
 
-.action-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.action-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
-  transform: translateX(-4px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-}
 
 /* 壁纸设置面板 */
 .wallpaper-settings-overlay {

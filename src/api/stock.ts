@@ -68,10 +68,12 @@ export function parseSinaData(symbol: string, dataStr: string): StockItem | null
     const changePercent = parseFloat(fields[2]) || 0
     prevClose = price / (1 + changePercent / 100)
   } else if (symbol.startsWith('hk')) {
-    // 港股格式：英文名称,中文名称,最新价,涨跌幅,昨收,...
+    // 港股格式：英文名称,中文名称,开盘价,昨收,最高,最低,最新价,涨跌幅,...
+    // 字段索引：0=英文名称, 1=中文名称, 2=开盘价, 3=昨收, 4=最高, 5=最低, 6=最新价, 7=涨跌幅
     name = fields[1] || fields[0] || symbol.toUpperCase()
-    price = parseFloat(fields[6]) || 0  // 港股第7个字段是现价
-    prevClose = parseFloat(fields[3]) || 0  // 港股第4个字段是昨收
+    price = parseFloat(fields[6]) || 0  // 港股第7个字段(索引6)是最新价
+    prevClose = parseFloat(fields[3]) || 0  // 港股第4个字段(索引3)是昨收
+    console.log(`[Stock API] HK stock ${symbol} fields:`, { name, price, prevClose, rawFields: fields.slice(0, 10) })
   } else {
     // A股格式：名称,今日开盘价,昨日收盘价,当前价,...
     name = fields[0] || symbol.toUpperCase()
@@ -99,40 +101,45 @@ export function parseSinaData(symbol: string, dataStr: string): StockItem | null
 // 获取股票数据
 export async function fetchStockData(symbols: string[]): Promise<StockItem[]> {
   if (symbols.length === 0) return []
-  
+
   try {
     const url = `${SINA_API_URL}${symbols.join(',')}`
-    
+    console.log('[Stock API] Request URL:', url)
+
     // 使用 fetch 并设置特殊的 headers 来绕过同源限制
     const response = await fetch(url, {
       headers: {
         'Referer': 'https://finance.sina.com.cn'
       }
     })
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
+
     const text = await response.text()
+    console.log('[Stock API] Response text:', text.substring(0, 500))
+
     const results: StockItem[] = []
-    
+
     // 解析返回的 JavaScript 变量
     for (const symbol of symbols) {
       const regex = new RegExp(`var hq_str_${symbol}="([^"]*)"`)
       const match = text.match(regex)
-      
+      console.log(`[Stock API] Parsing symbol ${symbol}:`, match ? 'found' : 'not found')
+
       if (match) {
         const stock = parseSinaData(symbol, match[0])
+        console.log(`[Stock API] Parsed stock for ${symbol}:`, stock)
         if (stock) {
           results.push(stock)
         }
       }
     }
-    
+
     return results
   } catch (error) {
-    console.error('Failed to fetch stock data:', error)
+    console.error('[Stock API] Failed to fetch stock data:', error)
     return []
   }
 }

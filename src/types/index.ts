@@ -1,6 +1,6 @@
 export interface Widget {
   id: string
-  type: 'search' | 'github' | 'zhihu' | 'v2ex' | 'navigation' | 'poetry' | 'stock'
+  type: 'search' | 'github' | 'zhihu' | 'v2ex' | 'navigation' | 'poetry' | 'clockWeather'
   title: string
   x: number
   y: number
@@ -44,6 +44,7 @@ export interface LayoutConfig {
   gridRowHeight: number
   gap: number
   widgetOpacity?: number
+  widgetOpacities?: Record<string, number>
 }
 
 export interface SearchEngine {

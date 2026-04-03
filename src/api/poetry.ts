@@ -14,8 +14,8 @@ export async function fetchPoetry(): Promise<PoetryItem | null> {
     
     return {
       content: data.content,
-      author: data.origin?.author || data.author || '未知',
-      title: data.origin?.title || data.title || '未知',
+      author: data.author || '未知',
+      title: data.origin || '未知',
       category: data.category || '古诗词'
     }
   } catch (error) {

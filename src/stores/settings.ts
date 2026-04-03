@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { Settings, BingImage } from '@/types'
 import { storage } from '@/utils/storage'
 import { getWallpaper } from '@/api/bing'
+import { useThemeStore } from './theme'
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<Settings>({
@@ -41,11 +42,17 @@ export const useSettingsStore = defineStore('settings', () => {
     const cached = await storage.getCachedData<BingImage>('bingWallpaper')
     if (cached) {
       bingWallpaper.value = cached
+      // 自动提取主题
+      const themeStore = useThemeStore()
+      await themeStore.extractFromWallpaper(cached.url)
       return
     }
     const wallpaper = await getWallpaper()
     if (wallpaper) {
       bingWallpaper.value = wallpaper
+      // 自动提取主题
+      const themeStore = useThemeStore()
+      await themeStore.extractFromWallpaper(wallpaper.url)
     }
   }
 
@@ -67,6 +74,9 @@ export const useSettingsStore = defineStore('settings', () => {
     await storage.setWallpaper(dataUrl)
     settings.value.wallpaperType = 'custom'
     await saveSettings()
+    // 自动提取主题
+    const themeStore = useThemeStore()
+    await themeStore.extractFromWallpaper(dataUrl)
   }
 
   function setSearchEngine(engine: string) {
