@@ -134,6 +134,7 @@ const V2exHot = defineAsyncComponent(() => import('./V2exHot.vue'))
 const Navigation = defineAsyncComponent(() => import('./Navigation.vue'))
 const Poetry = defineAsyncComponent(() => import('./Poetry.vue'))
 const ClockWeather = defineAsyncComponent(() => import('./ClockWeather.vue'))
+const XueqiuHot = defineAsyncComponent(() => import('./XueqiuHot.vue'))
 
 const layoutStore = useLayoutStore()
 const gridContainer = ref<HTMLElement>()
@@ -188,7 +189,8 @@ function getWidgetComponent(type: string) {
     v2ex: V2exHot,
     navigation: Navigation,
     poetry: Poetry,
-    clockWeather: ClockWeather
+    clockWeather: ClockWeather,
+    xueqiu: XueqiuHot
   }
   return components[type] || 'div'
 }

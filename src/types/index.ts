@@ -1,6 +1,6 @@
 export interface Widget {
   id: string
-  type: 'search' | 'github' | 'zhihu' | 'v2ex' | 'navigation' | 'poetry' | 'clockWeather'
+  type: 'search' | 'github' | 'zhihu' | 'v2ex' | 'navigation' | 'poetry' | 'clockWeather' | 'xueqiu'
   title: string
   x: number
   y: number
@@ -88,17 +88,6 @@ export interface PoetryItem {
   category: string
 }
 
-export interface StockItem {
-  symbol: string
-  name: string
-  price: number
-  prevClose: number
-  change: number
-  changePercent: number
-  market: 'A' | 'HK' | 'US'
-  lastUpdate: number
-}
-
 export interface ZhihuItem {
   title: string
   url: string
@@ -110,6 +99,35 @@ export interface V2exTopic {
   url: string
   replies: number
   node: string
+}
+
+export type XueqiuMarket = 'hs' | 'hk' | 'us'
+
+export interface XueqiuHotStock {
+  symbol: string
+  name: string
+  current: number
+  percent: number
+  chg: number
+  high: number
+  low: number
+  volume: number
+  amount: number
+  market_capital: number
+  turnover_rate: number
+  pe_ttm: number
+  follow: number
+  value: number
+  rank_change: number
+}
+
+export interface XueqiuStockRealtime {
+  symbol: string
+  name: string
+  current: number
+  percent: number
+  chg: number
+  lastUpdate: number
 }
 
 export interface Settings {

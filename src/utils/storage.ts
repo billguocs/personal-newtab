@@ -17,7 +17,8 @@ const DEFAULT_LAYOUT: LayoutConfig = {
     { id: 'navigation', type: 'navigation', title: '快速导航', x: 2, y: 9, w: 8, h: 3, visible: true },
     { id: 'github', type: 'github', title: 'GitHub趋势', x: 0, y: 12, w: 4, h: 8, visible: true },
     { id: 'zhihu', type: 'zhihu', title: '知乎热榜', x: 4, y: 12, w: 4, h: 8, visible: true },
-    { id: 'v2ex', type: 'v2ex', title: 'V2EX热议', x: 8, y: 12, w: 4, h: 8, visible: true }
+    { id: 'v2ex', type: 'v2ex', title: 'V2EX热议', x: 8, y: 12, w: 4, h: 8, visible: true },
+    { id: 'xueqiu', type: 'xueqiu', title: '雪球热榜', x: 0, y: 20, w: 6, h: 10, visible: true }
   ],
   gridCols: 12,
   gridRowHeight: 45,
