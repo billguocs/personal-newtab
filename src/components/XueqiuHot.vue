@@ -297,8 +297,9 @@ async function switchTab(market: XueqiuMarket) {
 }
 
 async function refresh() {
+  // 沪深有东方财富降级（无需 Cookie），港股/美股无 Cookie 时获取会返回空
+  await hotlistStore.loadXueqiuHot(activeTab.value, true)
   if (hasCookie.value) {
-    await hotlistStore.loadXueqiuHot(activeTab.value, true)
     refreshWatchlistQuotes()
   }
 }

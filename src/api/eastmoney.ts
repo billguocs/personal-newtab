@@ -79,13 +79,14 @@ export async function fetchEastMoneyHotRank(limit = 50): Promise<XueqiuHotStock[
       }
     }
 
-    // 合并排名和行情数据
+    // Eastmoney push2 API 返回的价格、涨跌幅等字段是整数分/厘单位，需除以 100
+    // f2(现价), f3(涨跌幅), f15(最高), f16(最低), f17(今开), f18(昨收) 均是如此
     return rankItems.map((item, index) => {
       const code = extractCode(item.sc)
       const quote = quoteMap.get(code)
-      const current = quote?.f2 ?? 0
-      const prevClose = quote?.f18 ?? 0
-      const percent = quote?.f3 ?? 0
+      const current = (quote?.f2 ?? 0) / 100
+      const prevClose = (quote?.f18 ?? 0) / 100
+      const percent = (quote?.f3 ?? 0) / 100
       const chg = prevClose > 0 ? current - prevClose : 0
 
       return {
@@ -94,8 +95,8 @@ export async function fetchEastMoneyHotRank(limit = 50): Promise<XueqiuHotStock[
         current,
         percent,
         chg,
-        high: quote?.f15 ?? 0,
-        low: quote?.f16 ?? 0,
+        high: (quote?.f15 ?? 0) / 100,
+        low: (quote?.f16 ?? 0) / 100,
         volume: 0,
         amount: 0,
         market_capital: 0,
