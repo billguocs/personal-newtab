@@ -15,12 +15,12 @@
       <header class="book-heading"><span>一日一诗</span><span aria-hidden="true">拾 · 光</span></header>
       <div v-if="poetryStore.loading" class="book-state" role="status">展卷中…</div>
       <div v-else-if="poetryStore.error" class="book-state" role="status"><p>{{ poetryStore.error }}</p><button @click="poetryStore.loadPoetry()">重新展卷</button></div>
-      <div v-else-if="poetryStore.currentPoetry" class="poetry-content">
+      <div v-else-if="poetryStore.currentPoetry" class="poetry-content" tabindex="0" aria-label="诗词、标题与作者，可横向滚动阅读">
         <div class="poetry-meta">
           <span class="poetry-title" :title="poetryStore.currentPoetry.title">{{ poetryStore.currentPoetry.title }}</span>
           <span class="poetry-author" :title="poetryStore.currentPoetry.author">{{ poetryStore.currentPoetry.author }}</span>
         </div>
-        <div class="verse-scroll" tabindex="0" aria-label="诗词正文，可滚动阅读">
+        <div class="poetry-verse">
           <p class="poetry-text">{{ poetryStore.currentPoetry.content }}</p>
         </div>
       </div>
@@ -48,11 +48,12 @@ onMounted(() => poetryStore.loadPoetry())
 .book-sheet { position: relative; isolation: isolate; height: 100%; padding: 10px 12px 8px; display: flex; flex-direction: column; min-width: 0; }
 .book-paper { position: absolute; inset: 10px 12px 14px 32px; z-index: -1; background: repeating-linear-gradient(97deg, transparent 0 7px, rgba(124,99,58,.035) 7px 8px, transparent 8px 13px), radial-gradient(ellipse at 20% 10%, #fbf5e5, #e9ddbf); border: 1px solid #d6c7a5; opacity: 1; }
 .book-heading { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid rgba(126,98,55,.3); padding-bottom: 7px; color: #8d7855; font-size: 10px; letter-spacing: 3px; flex-shrink: 0; }
-.poetry-content { flex: 1; min-height: 0; display: flex; flex-direction: row-reverse; gap: 14px; padding: 12px 0 6px; }
-.poetry-meta { display: flex; flex-direction: column; writing-mode: vertical-rl; gap: 7px; flex-shrink: 0; max-width: 56px; overflow: hidden; }
+.poetry-content { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: row; direction: rtl; gap: 14px; padding: 12px 0 6px; overflow: auto; scrollbar-width: thin; scrollbar-color: #beab85 transparent; }
+.poetry-meta { display: grid; grid-auto-flow: column; grid-auto-columns: max-content; direction: rtl; gap: 7px; flex: 0 0 auto; height: 100%; }
+.poetry-title, .poetry-author { direction: ltr; writing-mode: vertical-rl; overflow-wrap: anywhere; height: 100%; line-height: 1.6; }
 .poetry-title { font-size: 16px; letter-spacing: 2px; font-weight: 600; }
 .poetry-author { color: #8d7855; font-size: 14px; letter-spacing: 2px; }
-.verse-scroll { flex: 1; min-width: 0; display: flex; flex-direction: row-reverse; overflow: auto; scrollbar-width: thin; scrollbar-color: #beab85 transparent; }
+.poetry-verse { direction: ltr; flex: 0 0 auto; height: 100%; display: flex; flex-direction: row-reverse; }
 .poetry-text { flex-shrink: 0; margin: 0; height: 100%; writing-mode: vertical-rl; text-orientation: mixed; white-space: pre-wrap; font-size: 20px; line-height: 1.85; letter-spacing: 3px; }
 .book-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-shrink: 0; font-size: 9px; color: #9a8868; letter-spacing: 1px; }
 .poetry-seal { display: inline-flex; align-items: center; justify-content: center; width: 21px; height: 23px; border: 1px solid #a34b3d; border-radius: 2px; color: #a34b3d; font-size: 14px; transform: rotate(-6deg); }

@@ -153,11 +153,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import ModalDialog from './ModalDialog.vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import type { NavigationLink } from '@/types'
 import { storage } from '@/utils/storage'
+import { subscribeStorage } from '@/utils/storageChanges'
 
 const navLinks = ref<NavigationLink[]>([])
 const isEditing = ref(false)
@@ -238,6 +239,7 @@ function getDefaultIcon(name: string): string {
 async function loadNavLinks() {
   try {
     const saved = await storage.getNavigationLinks<NavigationLink[]>()
+    if (isEditing.value) return
     
     // 只有当 saved 是 null 或 undefined 时才使用默认值（表示从未保存过）
     // 空数组 [] 是有效值，表示用户手动清空了导航
@@ -247,22 +249,10 @@ async function loadNavLinks() {
     } else {
       // 从未保存过数据，使用默认值
       navLinks.value = JSON.parse(JSON.stringify(defaultLinks))
-      await saveToStorage()
-      console.log('Navigation: 首次使用，已加载并保存默认链接', defaultLinks.length, '个')
     }
   } catch (error) {
     console.error('Navigation: 加载失败', error)
     navLinks.value = JSON.parse(JSON.stringify(defaultLinks))
-  }
-}
-
-async function saveToStorage() {
-  try {
-    await storage.setNavigationLinks(JSON.parse(JSON.stringify(navLinks.value)))
-    console.log('Navigation: 已保存', navLinks.value.length, '个链接:', navLinks.value.map(l => l.name))
-  } catch (error) {
-    console.error('Navigation: 保存失败', error)
-    throw error
   }
 }
 
@@ -277,6 +267,7 @@ function cancelEdit() {
   showBookmarkPanel.value = false
   navLinks.value = originalLinks.value
   isEditing.value = false
+  void loadNavLinks()
 }
 
 async function saveLinks() {
@@ -403,11 +394,14 @@ watch(showBookmarkPanel, (newVal) => {
   }
 })
 
+let unsubscribe: (() => void) | undefined
 onMounted(() => {
+  unsubscribe = subscribeStorage('sync', ['navigationLinks'], () => { void loadNavLinks() })
   loadFaviconCache()
   loadNavLinks()
   console.log('Navigation 组件已加载，链接数:', navLinks.value.length)
 })
+onBeforeUnmount(() => unsubscribe?.())
 </script>
 
 <style scoped>

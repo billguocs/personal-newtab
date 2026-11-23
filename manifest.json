@@ -27,8 +27,14 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/newtab/*", "assets/*"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "src/newtab/*",
+        "assets/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
-  ]
+  ],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAms81H7N25jHnZ5j4aG/80JWNe1xskFTX3KIn1jGmMmBZXEUyz7rE0JR8ICDdzgDRWcVHF+W+2sUucANzSbRTDMbgFDVoHwtQwh/gKFqLg4JOP1Wa0F3S5IPxmwZULxqFoN/AUremxfzDbVDypMhuecJQfGBvPa2nA0OA+Slq3apXNNrDnay/GKqnnM+LNMdHMfaWoyw2zm+0kA6y9L8AGR9zzWMRDUapF+1LLejcWquJkkpt2a6f/hQ4iV7VtfkIZbbvoWfQqRcaiWETfnPskA1TbBdV6+eMSh0JQwf0A2Bzs+iXdook60eWnxdmlPDbtooxeS3vqOnBLpYDq79ZuQIDAQAB"
 }

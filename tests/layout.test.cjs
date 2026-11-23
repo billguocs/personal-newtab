@@ -30,6 +30,7 @@ function loader(overrides = {}) {
 }
 const load = loader()
 const geometry = load('src/utils/layoutGeometry.ts')
+const backup = load('src/utils/configBackup.ts')
 const { DEFAULT_LAYOUT } = load('src/utils/layoutDefaults.ts')
 const clone = value => JSON.parse(JSON.stringify(value))
 function setup(saved = DEFAULT_LAYOUT) {
@@ -254,4 +255,127 @@ test('重复保存请求被阻止，保存期间不能丢弃或修改草稿', as
   assert.equal(count, 1)
   complete(); await saving
   assert.equal(store.isEditing, false)
+})
+
+test('manifest 固定的公钥可解析且扩展 ID 不随机器路径改变', () => {
+  const crypto = require('node:crypto')
+  const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'))
+  const key = Buffer.from(manifest.key, 'base64')
+  assert.equal(crypto.createPublicKey({ key, type: 'spki', format: 'der' }).asymmetricKeyType, 'rsa')
+  const id = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32).replace(/[0-9a-f]/g, digit => String.fromCharCode(97 + parseInt(digit, 16)))
+  assert.equal(id, 'elkbjgjhmajcjfijincfgfikepllokga')
+  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+  const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'))
+  assert.equal(pkg.version, manifest.version)
+  assert.equal(lock.version, manifest.version)
+  assert.equal(lock.packages[''].version, manifest.version)
+})
+
+test('同步期间保留布局编辑草稿，取消后使用远端新布局', async () => {
+  let remote = clone(DEFAULT_LAYOUT)
+  setActivePinia(createPinia())
+  const storage = { getLayout: async () => clone(remote), setLayout: async value => { remote = clone(value) } }
+  const store = loader({ '@/utils/storage': { storage } })('src/stores/layout.ts').useLayoutStore()
+  await store.loadLayout(); store.startEditing()
+  store.setWidgetOpacity('poetry', 0.3)
+  remote.widgetOpacity = 0.6
+  remote.widgets[0].y = 40
+  await store.loadLayout()
+  assert.equal(store.getWidgetOpacity('poetry'), 0.3)
+  assert.equal(store.layout.widgets[0].y, 0)
+  assert.ok(store.feedback.includes('草稿已保留'))
+  store.cancelEditing()
+  assert.equal(store.layout.widgets[0].y, 40)
+  assert.equal(store.getWidgetOpacity('poetry'), 0.6)
+})
+
+test('同步监听只响应指定存储区与键，卸载移除监听', () => {
+  const previous = global.chrome
+  let listener, calls = 0
+  global.chrome = { storage: { onChanged: { addListener: value => { listener = value }, removeListener: value => { assert.equal(value, listener); listener = null } } } }
+  try {
+    const stop = load('src/utils/storageChanges.ts').subscribeStorage('sync', ['layout'], () => calls++)
+    listener({ layout: { newValue: {} } }, 'local')
+    listener({ settings: { newValue: {} } }, 'sync')
+    listener({ layout: { newValue: {} } }, 'sync')
+    assert.equal(calls, 1)
+    stop(); assert.equal(listener, null)
+  } finally { global.chrome = previous }
+})
+
+test('旧配置备份兼容数字键数组，白名单排除令牌，拒绝无效导航和超限数据', () => {
+  const value = { app: 'personal-newtab', version: 1, sync: { layout: clone(DEFAULT_LAYOUT), navigationLinks: { '0': { id: '1', name: '示例', url: 'https://example.com' } }, token: 'excluded' }, local: { xueqiuWatchlist: { '0': ' SH600000 ', '1': 'SH600000' }, xueqiuCookie: 'excluded' } }
+  value.sync.layout.widgets = Object.fromEntries(value.sync.layout.widgets.map((item, index) => [index, item]))
+  const parsed = backup.parseConfigBackup(value)
+  assert.equal(Array.isArray(parsed.sync.layout.widgets), true)
+  assert.equal(parsed.sync.navigationLinks[0].url, 'https://example.com/')
+  assert.deepEqual(parsed.local.xueqiuWatchlist, ['SH600000'])
+  assert.equal(parsed.sync.token, undefined)
+  assert.equal(parsed.local.xueqiuCookie, undefined)
+  const invalid = clone(value)
+  invalid.sync.navigationLinks['0'].url = 'javascript:alert(1)'
+  assert.throws(() => backup.parseConfigBackup(invalid), /HTTP/)
+  assert.throws(() => backup.parseConfigBackup({}), /备份/)
+  assert.throws(() => backup.assertSyncSize({ navigationLinks: '中'.repeat(3000) }), /8KB/)
+})
+
+test('导入前校验且失败回滚，空导航和独立不透明度可恢复', async () => {
+  const previous = global.chrome
+  const data = { sync: { navigationLinks: [{ id: 'old', name: '旧导航', url: 'https://example.com' }] }, local: { customWallpaper: 'https://example.com/old.png' } }
+  const initial = clone(data)
+  let fail = true, writes = 0
+  const area = name => ({
+    get: async keys => Object.fromEntries(keys.filter(key => key in data[name]).map(key => [key, clone(data[name][key])])),
+    set: async value => { writes++; if (name === 'sync' && fail) { fail = false; throw new Error('quota') } Object.assign(data[name], clone(value)) },
+    remove: async keys => keys.forEach(key => delete data[name][key])
+  })
+  global.chrome = { storage: { sync: area('sync'), local: area('local') } }
+  try {
+    const original = await backup.exportConfigBackup()
+    assert.equal(original.app, 'personal-newtab')
+    const layout = clone(DEFAULT_LAYOUT); layout.widgetOpacities = { poetry: 0.1 }
+    const imported = { app: 'personal-newtab', version: 1, sync: { navigationLinks: [], layout }, local: { customWallpaper: 'https://example.com/new.png', xueqiuWatchlist: ['SH600000'] } }
+    await assert.rejects(backup.importConfigBackup(imported), /quota/)
+    assert.deepEqual(data, initial)
+    const count = writes
+    await assert.rejects(backup.importConfigBackup({ ...imported, sync: { navigationLinks: null } }))
+    assert.equal(writes, count)
+    await backup.importConfigBackup(imported)
+    assert.deepEqual(data.sync.navigationLinks, [])
+    assert.equal(data.sync.layout.widgetOpacities.poetry, 0.1)
+    assert.deepEqual(data.local.xueqiuWatchlist, ['SH600000'])
+  } finally { global.chrome = previous }
+})
+
+test('主题首次加载不写默认值，远端主题更新不打断当前预览', async () => {
+  const previousChrome = global.chrome, previousWindow = global.window
+  let saved = {}, writes = 0
+  const applied = []
+  global.chrome = { storage: { sync: { get: async () => clone(saved), set: async value => { writes++; saved = clone(value) } } } }
+  global.window = { matchMedia: () => ({ matches: false }) }
+  setActivePinia(createPinia())
+  try {
+    const store = loader({ '@/utils/themeExtractor': { extractThemes: async () => [], applyThemeToCSS: theme => applied.push(theme.id) } })('src/stores/theme.ts').useThemeStore()
+    await store.loadTheme()
+    assert.equal(writes, 0)
+    const preview = { ...clone(store.currentTheme), id: 'preview' }
+    store.preview(preview)
+    saved = { appearanceVersion: 2, currentTheme: { ...clone(store.currentTheme), id: 'remote' } }
+    await store.loadTheme()
+    assert.equal(store.activeTheme.id, 'preview')
+    assert.equal(applied.at(-1), 'preview')
+    store.cancelPreview()
+    assert.equal(store.activeTheme.id, 'remote')
+    assert.equal(applied.at(-1), 'remote')
+    store.preview(preview)
+    global.chrome.storage.sync.set = async () => { throw new Error('quota exceeded') }
+    assert.equal(await store.applyTheme(preview), false)
+    assert.equal(store.currentTheme.id, 'remote')
+    assert.equal(store.previewTheme.id, 'preview')
+    assert.match(store.saveError, /quota/)
+    saved = { appearanceVersion: 2, currentTheme: { id: 'broken' }, extractedThemes: [null, { id: 'broken' }] }
+    await store.loadTheme()
+    store.cancelPreview()
+    assert.equal(store.activeTheme.id, 'quiet-light')
+  } finally { global.chrome = previousChrome; global.window = previousWindow }
 })

@@ -23,10 +23,9 @@ npm run test:layout    # Node 内置测试：网格边界、碰撞、布局草�
 
 `src/newtab/main.ts` → `App.vue`。`App.vue` 的 `onMounted` 按顺序加载：
 
-1. `layoutStore.loadLayout()`（必须先完成，`GridLayout` 只在 `visibleWidgets.length > 0` 时渲染）
+1. 注册同步变更监听，并行加载 `layoutStore.loadLayout()` 和 `themeStore.loadTheme()`
 2. `settingsStore.loadSettings()`（含 Bing 壁纸与主题提取）
-3. `hotlistStore.loadAll()`
-4. `themeStore.loadTheme()`
+3. 后台执行 `hotlistStore.loadAll()`，网络请求不阻塞配置加载
 
 同时 watch `settingsStore.isDark`，给 `<html>` 添加/移除 `.dark`。
 
@@ -57,6 +56,8 @@ npm run test:layout    # Node 内置测试：网格边界、碰撞、布局草�
 
 - `getCachedData/setCachedData` 的 TTL 固定为 **30 分钟**，部分模块通过 `force=true` 跳过缓存。
 - `getLayout()` 包含将 Chrome Sync 存成类数组对象（`{"0": {...}}`）转回数组的兼容逻辑，不要删除。
+- `storageChanges.subscribeStorage` 按存储区和键订阅同步更新，卸载时取消。布局更新只替换 committed，保留编辑草稿；导航编辑期间不覆盖草稿，取消时重新读取；主题预览保持到保存/取消。首次加载无配置时不要自动写默认导航/主题。
+- `ConfigTransfer.vue` / `configBackup.ts` 提供配置导出、校验导入与失败回滚，仅包含配置白名单，不含 Cookie/令牌。旧 ID 迁移先在旧页面执行 `public/export-legacy-config.js`，再在新 ID 页面导入，详见 README。
 - 缓存 key 约定：`bingWallpaper`、`githubTrending_{period}_{language}`、`zhihuHot`、`v2exHot`、`xueqiuHot_v2_{market}`、`xueqiuQuotes`。
 
 ## 主题与样式
@@ -64,6 +65,7 @@ npm run test:layout    # Node 内置测试：网格边界、碰撞、布局草�
 - 默认使用 `src/utils/themePresets.ts` 的固定中性色浅/深主题；首次升级通过 `appearanceVersion: 2` 切换新主题，旧配色保留在主题列表。壁纸取色仅作为可选方案。
 - 列表默认背景透明，排名无色块，只有当前行 hover/focus 时显示 `--row-hover`；不要再给每行添加常驻胶囊底色。组件透明度只作用于卡片底色，悬停组件不改变透明度。
 - `poetry` 和 `clockWeather` 在 `WidgetFrame` 中使用透明外壳，由组件自行绘制线装书、现代时钟天气背景。仍须继承 `--widget-opacity` / `--widget-blur`，不允许给整个组件（含文字）设置 opacity；线装书多层背景统一放在 `.book-art` 中控制不透明度，避免叠乘。
+- 诗词标题和作者用 Grid 的 `max-content` 列宽随竖排换列扩展，不设固定宽度上限；与正文共用右起的横向滚动区域。不要恢复裁切元数据或嵌套正文滚动，否则长标题会被遮挡或挤压正文。
 - `useElementSize` 使用 ResizeObserver 读取组件外部尺寸以适配拖拽缩放；不要用会随 padding 改变的 contentRect 值切换尺寸 class，以免产生 ResizeObserver 循环。`WeatherGlyph.vue` 为本地 SVG 天气图标，不需要远程素材。
 - 时钟天气正文固定左右各 50%，不添加顶部 padding；`WeatherScene.vue` 根据当前 WMO 天气码绘制右栏动态背景，雨雪使用 transform 动画，装饰单独继承 `--widget-opacity`，并支持 `prefers-reduced-motion`。
 - `src/utils/themeExtractor.ts` 用 `node-vibrant/browser` 从壁纸取色，生成 3–5 个 `Theme`；`themeStore` 支持 preview（临时应用）和 applyTheme（持久化）。
@@ -83,6 +85,8 @@ npm run test:layout    # Node 内置测试：网格边界、碰撞、布局草�
 - GitHub 趋势不是官方 trending 接口，而是用 Search API 按 `created:>{date}` + stars 排序近似。
 
 ## 其他约定
+
+- `manifest.json.key` 为固定扩展 ID 的公钥，不要重新生成或删除；预期 ID 为 `elkbjgjhmajcjfijincfgfikepllokga`。布局回归测试包含公钥解析、ID 及版本一致性检查。固定 ID 并不绕过账号、网络和 Chrome 同步设置。
 
 - 路径别名 `@` → `/src`（`vite.config.ts`）。
 - 扩展名称/描述走 `public/_locales/{zh_CN,en}/messages.json` 的 `__MSG_*__`；应用内 i18n 已移除，`LangSwitcher.vue` 未挂载且不实际切换语言，不要照 README 的 Vue I18n 描述行事。

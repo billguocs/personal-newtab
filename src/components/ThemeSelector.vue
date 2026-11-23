@@ -3,7 +3,7 @@
     <div class="theme-panel">
       <div class="panel-header">
         <h3>主题设置</h3>
-        <button class="btn-close" @click="cancelAndClose">
+        <button class="btn-close" :disabled="themeStore.isSaving" @click="cancelAndClose">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 6 6 18"/>
             <path d="m6 6 12 12"/>
@@ -62,10 +62,11 @@
         </div>
 
         <!-- 操作按钮 -->
+        <p v-if="themeStore.saveError" role="alert" style="color: #dc2626; font-size: 13px; margin: 12px 0;">{{ themeStore.saveError }}</p>
         <div class="actions">
-          <button class="btn-secondary" @click="cancelAndClose">取消</button>
-          <button class="btn-reset" @click="resetTheme">重置</button>
-          <button class="btn-primary" @click="saveAndClose">保存</button>
+          <button class="btn-secondary" :disabled="themeStore.isSaving" @click="cancelAndClose">取消</button>
+          <button class="btn-reset" :disabled="themeStore.isSaving" @click="resetTheme">重置</button>
+          <button class="btn-primary" :disabled="themeStore.isSaving" @click="saveAndClose">{{ themeStore.isSaving ? '保存中…' : '保存' }}</button>
         </div>
       </div>
     </div>
@@ -94,15 +95,17 @@ function previewTheme(theme: Theme) {
   themeStore.preview(theme)
 }
 
-function saveAndClose() {
+async function saveAndClose() {
+  if (themeStore.isSaving) return
   // 如果有预览的主题，保存它
   if (themeStore.previewTheme) {
-    themeStore.applyTheme(themeStore.previewTheme)
+    if (!await themeStore.applyTheme(themeStore.previewTheme)) return
   }
   close()
 }
 
 function cancelAndClose() {
+  if (themeStore.isSaving) return
   // 取消预览，恢复原主题
   themeStore.cancelPreview()
   close()

@@ -57,6 +57,10 @@
     
     <!-- 主题选择器 -->
     <ThemeSelector :show="showThemeSelector" @close="showThemeSelector = false" />
+    <div v-if="!layoutStore.isEditing" class="setting-btn-container" style="bottom: 152px;">
+      <SettingButton text="配置备份与同步" @click="showConfigTransfer = true"><template #icon><span aria-hidden="true">⇄</span></template></SettingButton>
+    </div>
+    <ConfigTransfer v-if="showConfigTransfer" @close="showConfigTransfer = false" />
 
     <!-- 壁纸设置面板 -->
     <div v-if="showWallpaperSettings" class="wallpaper-settings-overlay" @click.self="showWallpaperSettings = false">
@@ -122,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useLayoutStore } from '@/stores/layout'
 import { useHotListStore } from '@/stores/hotlist'
@@ -132,7 +136,9 @@ import SettingButton from '@/components/SettingButton.vue'
 import EditModeIndicator from '@/components/EditModeIndicator.vue'
 import LayoutInspector from '@/components/LayoutInspector.vue'
 import ThemeSelector from '@/components/ThemeSelector.vue'
+import ConfigTransfer from '@/components/ConfigTransfer.vue'
 import { useThemeStore } from '@/stores/theme'
+import { subscribeStorage } from '@/utils/storageChanges'
 
 
 const settingsStore = useSettingsStore()
@@ -148,6 +154,7 @@ const wallpaperUrlInput = ref('')
 
 // 主题设置
 const showThemeSelector = ref(false)
+const showConfigTransfer = ref(false)
 
 function handleFileUpload(event: Event) {
   const target = event.target as HTMLInputElement
@@ -191,12 +198,18 @@ watch(() => settingsStore.isDark, (isDark) => {
   }
 }, { immediate: true })
 
+const subscriptions: (() => void)[] = []
+onBeforeUnmount(() => subscriptions.forEach(unsubscribe => unsubscribe()))
 onMounted(async () => {
+  subscriptions.push(
+    subscribeStorage('sync', ['layout'], () => { void layoutStore.loadLayout() }),
+    subscribeStorage('sync', ['settings'], () => { void settingsStore.loadSettings() }),
+    subscribeStorage('sync', ['currentTheme', 'extractedThemes', 'appearanceVersion'], () => { void themeStore.loadTheme() })
+  )
   // 先加载布局，确保 GridLayout 组件能正确渲染
-  await layoutStore.loadLayout()
+  await Promise.all([layoutStore.loadLayout(), themeStore.loadTheme()])
   await settingsStore.loadSettings()
-  await hotlistStore.loadAll()
-  await themeStore.loadTheme()
+  void hotlistStore.loadAll()
   isLoaded.value = true
 
   // 如果有当前壁纸，自动提取主题

@@ -89,7 +89,26 @@ npm run build
    - 点击「加载已解压的扩展程序」
    - 选择项目中的 `dist` 文件夹
 
-## 🤖 自动构建
+## 配置同步与旧版迁移
+
+扩展使用 manifest 公钥固定 ID：`elkbjgjhmajcjfijincfgfikepllokga`。从源码构建或解压 Release 加载，在不同机器、不同目录中都应保持此 ID。不要删除或重新生成 `manifest.json` 中的 `key`；它是公钥，可以随源码发布，不是 Cookie 或访问令牌。
+
+跨设备同步需要在各台 Chrome 中登录同一 Google 账号、启用同步，并能连接 Chrome 同步服务。可在 `chrome://extensions` 对比 ID。布局、尺寸、透明度、导航、主题和基础设置使用同步存储；自定义壁纸、雪球自选股仅保存在本地，可用右下角“配置备份与同步”导出、导入。天气位置在新设备重新设置。数据写入同步存储不代表服务器已完成同步；离线时 Chrome 会暂存。
+
+打开的页面会监听同步变更。正在编辑布局或导航、预览主题时保留当前编辑；取消后采用最新同步内容，保存则以本次编辑为准。首次安装只显示默认配置，不主动上传默认导航或默认主题，以免抢先覆盖尚未同步下来的内容。
+
+**从未固定 ID 的旧版本更新前，先备份配置，不要先卸载旧扩展。** 新旧 ID 的存储互相隔离，无法自动读取旧 ID 的数据：
+
+1. 保持旧扩展的新标签页打开，在开发者工具 Console 中执行 [旧版配置导出脚本](public/export-legacy-config.js) 的完整内容。脚本只读取配置并下载 JSON，不修改旧数据。
+2. 确认 JSON 文件已经下载，再加载带固定 ID 的新版扩展。
+3. 打开右下角“配置备份与同步”，选择备份文件，检查待导入项后点击“导入并覆盖配置”。导入前会下载一份当前配置备份；写入失败会尝试回滚。
+4. 确认布局、导航、自选股等恢复后，再自行停用旧扩展。保留 JSON 文件也可迁移至另一台机器。
+
+备份不包含 Cookie、访问令牌、热榜缓存或浏览记录。Chrome 同步每个配置项最多约 8KB，总计约 100KB，`unlimitedStorage` 不会扩大同步配额。备份导入会提前检查单项大小，超限时不会开始写入。
+
+参考：[Chrome 扩展固定 ID](https://developer.chrome.com/docs/extensions/reference/manifest/key)、[Chrome 存储与同步](https://developer.chrome.com/docs/extensions/reference/api/storage)。
+
+## 🤖 自动构建流程
 
 本项目已配置 GitHub Actions 自动构建流水线：
 

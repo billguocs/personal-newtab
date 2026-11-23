@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, onScopeDispose } from 'vue'
 import type { Settings, BingImage } from '@/types'
 import { storage } from '@/utils/storage'
 import { getWallpaper } from '@/api/bing'
@@ -18,6 +18,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const bingWallpaper = ref<BingImage | null>(null)
   const customWallpaperData = ref<string | null>(null)
   const isDark = ref(false)
+  let colorScheme: MediaQueryList | undefined
+  const updateDarkMode = () => { isDark.value = colorScheme?.matches ?? false }
+  onScopeDispose(() => colorScheme?.removeEventListener('change', updateDarkMode))
 
   const currentWallpaper = computed(() => {
     if (settings.value.wallpaperType === 'custom' && customWallpaperData.value) {
@@ -90,12 +93,11 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function checkDarkMode() {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
-    isDark.value = prefersDark.matches
-    
-    prefersDark.addEventListener('change', (e) => {
-      isDark.value = e.matches
-    })
+    if (!colorScheme) {
+      colorScheme = window.matchMedia('(prefers-color-scheme: dark)')
+      colorScheme.addEventListener('change', updateDarkMode)
+    }
+    updateDarkMode()
   }
 
   function toggleClock(show: boolean) {

@@ -30,6 +30,7 @@ export const useLayoutStore = defineStore('layout', () => {
 
   async function loadLayout() {
     committed.value = normalizeLayout(await storage.getLayout())
+    if (isEditing.value && !isSaving.value) feedback.value = '其他页面或设备更新了布局，当前草稿已保留；取消可使用新布局，完成将保存当前草稿'
   }
   function startEditing() {
     if (isEditing.value) return
