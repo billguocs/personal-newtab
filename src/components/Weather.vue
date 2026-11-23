@@ -1,32 +1,20 @@
 <template>
-  <div class="weather-widget">
-    <div v-if="loading" class="weather-loading">
-      <div class="spinner"></div>
-    </div>
-    
-    <div v-else-if="weather" class="weather-content" role="button" tabindex="0" aria-label="设置天气位置" @keydown.enter="showSettings = true" @keydown.space.prevent="showSettings = true" @click="showSettings = true">
-      <div class="weather-main">
-        <span class="weather-icon">{{ weatherIcon }}</span>
-        <div class="weather-info">
-          <div class="temperature">{{ weather.temperature }}°</div>
-          <div class="location">{{ shortLocationName }}</div>
-        </div>
-      </div>
-      
-      <!-- 紧凑的预报信息 -->
-      <div v-if="weather.forecast && weather.forecast.length > 0" class="forecast-compact">
-        <div v-for="(day, index) in weather.forecast.slice(0, 3)" :key="index" class="forecast-day">
-          <span class="day-name">{{ formatShortDate(day.date) }}</span>
-          <span class="day-icon">{{ getWeatherInfo(day.weatherCode).icon }}</span>
-          <span class="day-temp">{{ day.maxTemp }}°</span>
-        </div>
-      </div>
-    </div>
-    
-    <div v-else class="weather-error" role="button" tabindex="0" @keydown.enter="showSettings = true" @keydown.space.prevent="showSettings = true" @click="showSettings = true">
-      <span class="icon">📍</span>
-      <span>点击设置位置</span>
-    </div>
+  <div ref="element" class="weather-widget" :class="{ compact: width < 180 }">
+    <div v-if="loading" class="weather-loading" role="status"><div class="spinner"></div><span>更新天气中</span></div>
+    <button v-else-if="weather" class="weather-content" :aria-label="shortLocationName + '，' + weatherInfo.description + '，' + weather.temperature + '摄氏度。点击设置位置'" @click="showSettings = true">
+      <span class="weather-city"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M15.5 8c0 4-5.5 8.5-5.5 8.5S4.5 12 4.5 8a5.5 5.5 0 1 1 11 0Z" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="8" r="1.7" stroke="currentColor" stroke-width="1.4"/></svg><span :title="fullLocationName">{{ shortLocationName }}</span><span class="city-edit" aria-hidden="true">↗</span></span>
+      <span class="weather-main"><WeatherGlyph :code="weather.weatherCode" class="weather-icon" /><span class="weather-info"><span class="temperature">{{ weather.temperature }}<small>°C</small></span><span class="weather-condition">{{ weatherInfo.description }}</span></span></span>
+      <span class="weather-details"><span>湿度 {{ weather.humidity }}%</span><span>风速 {{ weather.windSpeed }} km/h</span></span>
+      <span v-if="weather.forecast?.length" class="forecast-compact">
+        <span v-for="day in weather.forecast.slice(0, 3)" :key="day.date" class="forecast-day">
+          <span class="day-name">{{ formatShortDate(day.date) }}</span><WeatherGlyph :code="day.weatherCode" class="day-icon" />
+          <span class="day-temp">{{ day.maxTemp }}° <span>{{ day.minTemp }}°</span></span>
+        </span>
+      </span>
+    </button>
+    <button v-else class="weather-error" @click="showSettings = true">
+      <WeatherGlyph :code="2" class="empty-weather-icon" /><span class="empty-weather-title">天气，随你所在</span><span class="empty-weather-hint">选择城市，看看窗外的温度 <span aria-hidden="true">↗</span></span>
+    </button>
 
     <!-- 设置面板 -->
     <ModalDialog v-if="showSettings" title="天气设置" @close="showSettings = false">
@@ -82,10 +70,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import ModalDialog from './ModalDialog.vue'
+import WeatherGlyph from './WeatherGlyph.vue'
+import { useElementSize } from '@/composables/useElementSize'
 import { getCurrentLocation, searchLocation, getWeatherByLocation, getWeatherInfo } from '@/api/weather'
 import type { LocationData, WeatherData } from '@/types'
 import { storage } from '@/utils/storage'
 
+const element = ref<HTMLElement>()
+const { width } = useElementSize(element)
 const weather = ref<WeatherData | null>(null)
 const selectedLocation = ref<LocationData | null>(null)
 const loading = ref(false)
@@ -95,10 +87,7 @@ const showSettings = ref(false)
 const searchQuery = ref('')
 const searchResults = ref<LocationData[]>([])
 
-const weatherIcon = computed(() => {
-  if (!weather.value) return ''
-  return getWeatherInfo(weather.value.weatherCode).icon
-})
+const weatherInfo = computed(() => getWeatherInfo(weather.value?.weatherCode ?? -1))
 
 // 完整地区名
 const fullLocationName = computed(() => {
@@ -201,88 +190,39 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.weather-widget {
-  @apply cursor-pointer;
-}
-
-.weather-loading {
-  @apply flex items-center justify-center p-4;
-}
-
-.spinner {
-  @apply w-6 h-6 border-2 border-t-transparent rounded-full animate-spin;
-  border-color: var(--accent-color);
-  border-top-color: transparent;
-}
-
-.weather-content {
-  @apply flex items-center gap-4 p-3 rounded-xl transition-all duration-200;
-}
-
-.weather-content:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.weather-main {
-  @apply flex items-center gap-2;
-}
-
-.weather-icon {
-  @apply text-3xl;
-}
-
-.weather-info {
-  @apply flex flex-col;
-}
-
-.temperature {
-  @apply text-2xl font-bold leading-none;
-  color: var(--text-primary);
-}
-
-.location {
-  @apply text-xs;
-  color: var(--text-secondary);
-}
-
-/* 紧凑预报 */
-.forecast-compact {
-  @apply flex items-center gap-3 pl-3;
-  border-left: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.forecast-day {
-  @apply flex flex-col items-center gap-0.5;
-  min-width: 36px;
-}
-
-.day-name {
-  @apply text-xs;
-  color: var(--text-secondary);
-}
-
-.day-icon {
-  @apply text-lg leading-none;
-}
-
-.day-temp {
-  @apply text-xs font-medium;
-  color: var(--text-primary);
-}
-
-.weather-error {
-  @apply flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all duration-200;
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.weather-error:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.icon {
-  @apply text-xl;
-}
+.weather-widget { min-width: 0; width: 100%; color: var(--clock-ink, var(--text-primary)); }
+.weather-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 0; color: var(--clock-muted, var(--text-secondary)); font-size: 11px; }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--clock-muted, var(--border-color)); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.weather-content { display: flex; flex-direction: column; gap: 7px; width: 100%; text-align: left; border-radius: 10px; background: transparent; color: inherit; }
+.weather-city { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--clock-muted, var(--text-secondary)); min-width: 0; width: 100%; }
+.weather-city svg { width: 13px; height: 13px; flex-shrink: 0; }
+.weather-city > span:first-of-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.city-edit { margin-left: auto; opacity: .5; }
+.weather-content:hover .city-edit, .weather-content:focus-visible .city-edit { opacity: 1; }
+.weather-main { display: flex; align-items: center; gap: 10px; }
+.weather-icon { width: 58px; height: 58px; flex-shrink: 0; }
+.weather-info { display: flex; flex-direction: column; gap: 3px; }
+.temperature { font-size: 34px; line-height: 1; font-weight: 350; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+.temperature small { font-size: 14px; font-weight: 400; letter-spacing: 0; margin-left: 2px; color: var(--clock-muted, var(--text-secondary)); }
+.weather-condition { font-size: 10px; color: var(--clock-muted, var(--text-secondary)); }
+.weather-details { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 9px; color: var(--clock-muted, var(--text-secondary)); }
+.forecast-compact { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; border-top: 1px solid rgba(113,136,161,.15); padding-top: 8px; margin-top: 2px; }
+.forecast-day { display: flex; align-items: center; flex-direction: column; gap: 2px; }
+.day-name { color: var(--clock-muted, var(--text-secondary)); font-size: 9px; }
+.day-icon { width: 25px; height: 25px; }
+.day-temp { display: flex; align-items: center; gap: 4px; font-size: 10px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.day-temp span { color: var(--clock-muted, var(--text-secondary)); }
+.weather-error { width: 100%; text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; background: transparent; color: inherit; border-radius: 10px; }
+.empty-weather-icon { width: 62px; height: 62px; }
+.empty-weather-title { font-size: 13px; font-weight: 500; }
+.empty-weather-hint { font-size: 10px; line-height: 1.7; color: var(--clock-muted, var(--text-secondary)); }
+.compact .weather-icon { width: 40px; height: 40px; }
+.compact .temperature { font-size: 29px; }
+.compact .weather-details { display: none; }
+.compact .forecast-compact { gap: 5px; }
+.compact .day-temp { flex-direction: column; gap: 1px; }
+.compact .empty-weather-icon { width: 44px; height: 44px; }
 
 /* 设置面板 */
 .settings-overlay {

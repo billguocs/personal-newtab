@@ -107,7 +107,7 @@ export async function getCurrentLocation(): Promise<LocationData | null> {
 export function getWeatherInfo(code: number): { description: string; icon: string } {
   const weatherMap: Record<number, { description: string; icon: string }> = {
     0: { description: '晴朗', icon: '☀️' },
-    1: { description: ' mainly clear', icon: '🌤️' },
+    1: { description: '晴间多云', icon: '🌤️' },
     2: { description: '多云', icon: '⛅' },
     3: { description: '阴天', icon: '☁️' },
     45: { description: '雾', icon: '🌫️' },

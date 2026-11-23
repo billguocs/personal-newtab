@@ -53,7 +53,7 @@ function itemStyle(widget: Widget): CSSProperties {
 .placement-preview span { background: var(--bg-primary); border-radius: 8px; padding: 8px 12px; font-size: 12px; }
 .placement-preview.invalid { border-color: #dc2626; background: rgba(220,38,38,.12); color: #dc2626; }
 @media (max-width: 900px) {
-  .grid-layout:not(.editing-grid) { display: flex; flex-direction: column; padding: 20px 16px 100px; }
+  .grid-layout:not(.editing-grid) { --clock-min-height: 230px; display: flex; flex-direction: column; padding: 20px 16px 100px; }
   .grid-layout:not(.editing-grid) :deep(.grid-item) { height: auto !important; }
   .grid-layout:not(.editing-grid) :deep(.grid-item:is([data-type="github"], [data-type="zhihu"], [data-type="v2ex"], [data-type="xueqiu"])) { height: 420px !important; }
   .grid-layout:not(.editing-grid) :deep([data-type="poetry"]) { height: 180px !important; }

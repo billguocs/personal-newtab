@@ -2,7 +2,7 @@
   <section class="grid-item" :class="{ editing, selected, moving }" :data-id="widget.id" :data-type="widget.type"
     :tabindex="editing ? 0 : undefined" :aria-label="editing ? widget.title + '，方向键移动，Shift 加方向键缩放' : undefined"
     @pointerdown="editing && emit('select')" @focusin="editing && emit('select')" @keydown="emit('keyboard', $event)">
-    <div class="widget-wrapper" :class="widget.type === 'search' ? 'widget-transparent' : 'widget-container'">
+    <div class="widget-wrapper" :class="['search', 'poetry', 'clockWeather'].includes(widget.type) ? 'widget-transparent' : 'widget-container'">
       <div v-if="editing && selected" class="frame-controls">
         <button class="drag-handle" :disabled="disabled" :aria-label="'移动' + widget.title" title="拖动移动；方向键微调"
           @pointerdown="emit('start', $event)" @keydown="emit('keyboard', $event)">⠿ {{ widget.title }}</button>
@@ -33,6 +33,7 @@ const directions: ResizeDirection[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw
 .widget-container::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--card-bg, var(--glass-bg)); opacity: var(--widget-opacity, .85); }
 .widget-content { flex: 1; min-height: 0; }
 .widget-content.editing { pointer-events: none; user-select: none; }
+.grid-item.editing :deep(.clock-weather-widget) { min-height: 0; }
 .grid-item.editing { outline: 1px dashed var(--border-color); outline-offset: 3px; }
 .grid-item.selected { outline: 2px solid var(--accent-color); z-index: 2; }
 .grid-item.moving { outline-style: dashed; }

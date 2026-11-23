@@ -63,6 +63,8 @@ npm run test:layout    # Node 内置测试：网格边界、碰撞、布局草�
 
 - 默认使用 `src/utils/themePresets.ts` 的固定中性色浅/深主题；首次升级通过 `appearanceVersion: 2` 切换新主题，旧配色保留在主题列表。壁纸取色仅作为可选方案。
 - 列表默认背景透明，排名无色块，只有当前行 hover/focus 时显示 `--row-hover`；不要再给每行添加常驻胶囊底色。组件透明度只作用于卡片底色，悬停组件不改变透明度。
+- `poetry` 和 `clockWeather` 在 `WidgetFrame` 中使用透明外壳，由组件自行绘制线装书、现代时钟天气背景。仍须继承 `--widget-opacity` / `--widget-blur`，不允许给整个组件（含文字）设置 opacity；线装书多层背景统一放在 `.book-art` 中控制不透明度，避免叠乘。
+- `useElementSize` 使用 ResizeObserver 读取组件外部尺寸以适配拖拽缩放；不要用会随 padding 改变的 contentRect 值切换尺寸 class，以免产生 ResizeObserver 循环。`WeatherGlyph.vue` 为本地 SVG 天气图标，不需要远程素材。
 - `src/utils/themeExtractor.ts` 用 `node-vibrant/browser` 从壁纸取色，生成 3–5 个 `Theme`；`themeStore` 支持 preview（临时应用）和 applyTheme（持久化）。
 - `applyThemeToCSS()` 同时写入 `--theme-*` 和旧变量 `--accent-color`、`--text-primary`、`--glass-bg`、`--bg-secondary` 等。**组件样式统一用旧变量**，才能同时兼容主题和深浅色。
 - 深浅色由 `styles.css` 中的 `:root` / `.dark` 变量覆盖实现，不是 Tailwind 的 `dark:` 变体（配置里也没有 `darkMode: 'class'`）。
