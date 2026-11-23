@@ -3,7 +3,7 @@
     <div ref="container" class="grid-layout" :class="{ 'editing-grid': store.isEditing }" :style="gridStyle">
       <WidgetFrame v-for="widget in displayedWidgets" :key="widget.id" :widget="widget"
         :editing="store.isEditing" :selected="store.selectedId === widget.id" :moving="preview?.id === widget.id"
-        :disabled="store.isSaving" :style="itemStyle(widget)" @select="store.selectedId = widget.id"
+        :disabled="store.isSaving" :font-scale="store.getWidgetFontScale(widget.id)" :style="itemStyle(widget)" @select="store.selectedId = widget.id"
         @start="(event, direction) => start(event, widget, direction)" @keyboard="keyboard($event, widget)">
         <component :is="components[widget.type]" />
       </WidgetFrame>
@@ -28,7 +28,8 @@ const components = {
   zhihu: defineAsyncComponent(() => import('./ZhihuHot.vue')),
   v2ex: defineAsyncComponent(() => import('./V2exHot.vue')),
   poetry: defineAsyncComponent(() => import('./Poetry.vue')),
-  clockWeather: defineAsyncComponent(() => import('./ClockWeather.vue')),
+  clock: defineAsyncComponent(() => import('./Clock.vue')),
+  weather: defineAsyncComponent(() => import('./WeatherWidget.vue')),
   xueqiu: defineAsyncComponent(() => import('./XueqiuHot.vue'))
 }
 const store = useLayoutStore()
@@ -58,11 +59,11 @@ function itemStyle(widget: Widget): CSSProperties {
 .placement-preview span { background: var(--bg-primary); border-radius: 8px; padding: 8px 12px; font-size: 12px; }
 .placement-preview.invalid { border-color: #dc2626; background: rgba(220,38,38,.12); color: #dc2626; }
 @media (max-width: 900px) {
-  .grid-layout:not(.editing-grid) { --clock-min-height: 230px; display: flex; flex-direction: column; padding: 20px 16px 100px; }
+  .grid-layout:not(.editing-grid) { --standalone-min-height: 230px; display: flex; flex-direction: column; padding: 20px 16px 100px; }
   .grid-layout:not(.editing-grid) :deep(.grid-item) { height: auto !important; }
   .grid-layout:not(.editing-grid) :deep(.grid-item:is([data-type="github"], [data-type="zhihu"], [data-type="v2ex"], [data-type="xueqiu"])) { height: 420px !important; }
   .grid-layout:not(.editing-grid) :deep([data-type="poetry"]) { height: 180px !important; }
-  .grid-layout:not(.editing-grid) :deep([data-type="clockWeather"]) { min-height: 200px; }
+  .grid-layout:not(.editing-grid) :deep(.grid-item:is([data-type="clock"], [data-type="weather"])) { min-height: 230px; }
   .layout-viewport.is-editing { overflow-x: auto; }
   .editing-grid { min-width: 900px; }
 }

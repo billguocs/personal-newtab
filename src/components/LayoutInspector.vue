@@ -12,6 +12,11 @@
         <input aria-label="当前组件背景不透明度" type="range" min=".1" max="1" step=".05"
           :value="store.getWidgetOpacity(store.selectedWidget.id)" @pointerdown="store.beginChange()"
           @input="widgetOpacity" @change="store.endChange()" @blur="store.endChange()" />
+        <label class="setting-row" for="widget-font-scale">组件字号 <output>{{ percent(store.getWidgetFontScale(store.selectedWidget.id)) }}%</output></label>
+        <input id="widget-font-scale" aria-label="组件字号缩放" type="range" min=".5" max="2" step=".05"
+          :value="store.getWidgetFontScale(store.selectedWidget.id)" @pointerdown="store.beginChange()"
+          @input="fontScale" @change="store.endChange()" @blur="store.endChange()" />
+        <button class="reset-font" @click="store.setWidgetFontScale(store.selectedWidget.id, 1)">恢复默认字号（100%）</button>
       </template>
       <label class="setting-row">背景模糊 <output>{{ store.layout.backgroundBlur ?? 24 }}px</output></label>
       <input aria-label="背景模糊" type="range" min="0" max="40" step="2" :value="store.layout.backgroundBlur ?? 24"
@@ -19,7 +24,7 @@
       <details><summary>显示 / 隐藏组件</summary><div class="widget-options">
         <label v-for="widget in store.layout.widgets" :key="widget.id"><input type="checkbox" :checked="widget.visible" @change="store.toggleWidgetVisibility(widget.id)" />{{ widget.title }}</label>
       </div></details>
-      <button class="reset-layout" @click="store.resetLayout()">恢复默认布局和不透明度</button>
+      <button class="reset-layout" @click="store.resetLayout()">恢复默认布局和外观</button>
     </fieldset>
   </aside>
 </template>
@@ -35,6 +40,9 @@ function widgetOpacity(event: Event) {
   if (store.selectedId) { store.beginChange(); store.setWidgetOpacity(store.selectedId, value(event)) }
 }
 function blur(event: Event) { store.beginChange(); store.setBackgroundBlur(value(event)) }
+function fontScale(event: Event) {
+  if (store.selectedId) { store.beginChange(); store.setWidgetFontScale(store.selectedId, value(event)) }
+}
 function toggleInheritance(event: Event) {
   if (!store.selectedId) return
   if ((event.target as HTMLInputElement).checked) store.clearWidgetOpacity(store.selectedId)
@@ -51,5 +59,6 @@ input[type="range"] { width: 100%; margin: 8px 0; accent-color: var(--accent-col
 .inherit-row { display: flex; gap: 6px; margin-top: 8px; align-items: center; } input[type="checkbox"] { accent-color: var(--accent-color); }
 summary { cursor: pointer; margin-top: 12px; } .widget-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 12px; } .widget-options label { display: flex; gap: 5px; align-items: center; }
 .reset-layout { margin-top: 16px; color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px; }
+.reset-font { color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 600px) { .layout-inspector { left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 38vh; } }
 </style>

@@ -4,6 +4,7 @@ import { crx } from '@crxjs/vite-plugin'
 import manifest from './manifest.json'
 import tailwindcss from 'tailwindcss'
 import autoprefixer from 'autoprefixer'
+import { widgetTypography } from './tooling/widgetTypography'
 
 export default defineConfig({
   plugins: [
@@ -17,7 +18,7 @@ export default defineConfig({
   },
   css: {
     postcss: {
-      plugins: [tailwindcss, autoprefixer]
+      plugins: [tailwindcss, autoprefixer, widgetTypography()]
     }
   },
   build: {

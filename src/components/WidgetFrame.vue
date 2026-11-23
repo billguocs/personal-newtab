@@ -2,13 +2,13 @@
   <section class="grid-item" :class="{ editing, selected, moving }" :data-id="widget.id" :data-type="widget.type"
     :tabindex="editing ? 0 : undefined" :aria-label="editing ? widget.title + '，方向键移动，Shift 加方向键缩放' : undefined"
     @pointerdown="editing && emit('select')" @focusin="editing && emit('select')" @keydown="emit('keyboard', $event)">
-    <div class="widget-wrapper" :class="['search', 'poetry', 'clockWeather'].includes(widget.type) ? 'widget-transparent' : 'widget-container'">
+    <div class="widget-wrapper" :class="['search', 'poetry', 'clock', 'weather'].includes(widget.type) ? 'widget-transparent' : 'widget-container'">
       <div v-if="editing && selected" class="frame-controls">
         <button class="drag-handle" :disabled="disabled" :aria-label="'移动' + widget.title" title="拖动移动；方向键微调"
           @pointerdown="emit('start', $event)" @keydown="emit('keyboard', $event)">⠿ {{ widget.title }}</button>
         <span>{{ widget.w }} × {{ widget.h }}</span>
       </div>
-      <div class="widget-content" :class="{ editing }" :inert="editing || undefined"><slot /></div>
+      <div class="widget-content" :style="{ '--widget-font-scale': fontScale }" :class="{ editing }" :inert="editing || undefined"><slot /></div>
       <template v-if="editing && selected">
         <button v-for="direction in directions" :key="direction" :class="['resize-handle', 'resize-' + direction]"
           :aria-label="'调整' + widget.title + '大小：' + direction" :disabled="disabled" tabindex="-1"
@@ -20,7 +20,7 @@
 <script setup lang="ts">
 import type { Widget } from '@/types'
 import type { ResizeDirection } from '@/utils/layoutGeometry'
-defineProps<{ widget: Widget; editing: boolean; selected: boolean; moving: boolean; disabled: boolean }>()
+defineProps<{ widget: Widget; editing: boolean; selected: boolean; moving: boolean; disabled: boolean; fontScale: number }>()
 const emit = defineEmits<{
   select: []; start: [event: PointerEvent, direction?: ResizeDirection]; keyboard: [event: KeyboardEvent]
 }>()
@@ -31,9 +31,9 @@ const directions: ResizeDirection[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw
 .widget-wrapper { position: relative; height: 100%; display: flex; flex-direction: column; border-radius: inherit; }
 .widget-container { isolation: isolate; background: transparent; border: 1px solid var(--glass-border); backdrop-filter: blur(var(--widget-blur, 24px)) saturate(0.85); box-shadow: 0 8px 28px rgba(15,23,42,.07); }
 .widget-container::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--card-bg, var(--glass-bg)); opacity: var(--widget-opacity, .85); }
-.widget-content { flex: 1; min-height: 0; }
+.widget-content { flex: 1; min-height: 0; font-size: calc(1rem * var(--widget-font-scale, 1)); }
 .widget-content.editing { pointer-events: none; user-select: none; }
-.grid-item.editing :deep(.clock-weather-widget) { min-height: 0; }
+.grid-item.editing :deep(.clock-widget), .grid-item.editing :deep(.weather-card) { min-height: 0; }
 .grid-item.editing { outline: 1px dashed var(--border-color); outline-offset: 3px; }
 .grid-item.selected { outline: 2px solid var(--accent-color); z-index: 2; }
 .grid-item.moving { outline-style: dashed; }

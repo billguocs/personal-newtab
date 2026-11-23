@@ -33,6 +33,62 @@ const geometry = load('src/utils/layoutGeometry.ts')
 const backup = load('src/utils/configBackup.ts')
 const { DEFAULT_LAYOUT } = load('src/utils/layoutDefaults.ts')
 const clone = value => JSON.parse(JSON.stringify(value))
+test('字号兼容旧布局，过滤无效组件与数值，并限制缩放范围', () => {
+  assert.deepEqual(geometry.normalizeLayout(DEFAULT_LAYOUT).widgetFontScales, {})
+  const layout = geometry.normalizeLayout({ ...DEFAULT_LAYOUT, widgetFontScales: {
+    poetry: 3, github: 0.1, zhihu: NaN, v2ex: '1.5', clock: 1.456, missing: 1.5
+  } })
+  assert.deepEqual(layout.widgetFontScales, { poetry: 2, clock: 1.46, github: 0.5 })
+})
+
+test('字号独立调整，支持撤销、重做、取消、保存、备份迁移和恢复默认', async () => {
+  const { store, writes } = setup()
+  await store.loadLayout()
+  store.startEditing()
+  store.beginChange()
+  store.setWidgetFontScale('poetry', 1.25)
+  store.setWidgetFontScale('poetry', 1.5)
+  store.endChange()
+  assert.equal(store.getWidgetFontScale('poetry'), 1.5)
+  assert.equal(store.getWidgetFontScale('github'), 1)
+  assert.equal(writes.length, 0)
+  store.undo()
+  assert.equal(store.getWidgetFontScale('poetry'), 1)
+  store.redo()
+  assert.equal(store.getWidgetFontScale('poetry'), 1.5)
+  store.cancelEditing()
+  assert.equal(store.getWidgetFontScale('poetry'), 1)
+  store.startEditing()
+  store.setWidgetFontScale('poetry', 1.5)
+  assert.equal(await store.stopEditing(), true)
+  assert.equal(writes[0].widgetFontScales.poetry, 1.5)
+  const restored = backup.parseConfigBackup({ app: 'personal-newtab', version: 1, sync: { layout: writes[0] }, local: {} })
+  assert.equal(restored.sync.layout.widgetFontScales.poetry, 1.5)
+  const reloaded = setup(restored.sync.layout).store
+  await reloaded.loadLayout()
+  assert.equal(reloaded.getWidgetFontScale('poetry'), 1.5)
+  store.startEditing()
+  store.setWidgetFontScale('poetry', 1)
+  assert.deepEqual(clone(store.layout.widgetFontScales), {})
+  store.undo()
+  store.resetLayout()
+  assert.equal(store.getWidgetFontScale('poetry'), 1)
+})
+
+test('构建时缩放 Tailwind 与固定字号/行高，避免 em 嵌套重复缩放', async () => {
+  const postcss = require('postcss')
+  const tailwind = require('tailwindcss')
+  const { widgetTypography } = loader()('tooling/widgetTypography.ts')
+  const css = '.tailwind { @apply text-sm; } .clock { font-size: min(var(--clock-size), 56px); line-height: 1.05; } .colon { font-size: .65em; }'
+  const result = await postcss([tailwind({ content: [{ raw: '<div></div>' }], corePlugins: { preflight: false } }), widgetTypography()]).process(css, { from: undefined })
+  const values = []
+  result.root.walkDecls(decl => values.push([decl.prop, decl.value]))
+  assert.ok(values.some(([key, value]) => key === 'font-size' && value === 'calc((0.875rem) * var(--widget-font-scale, 1))'))
+  assert.ok(values.some(([key, value]) => key === 'line-height' && value === 'calc((1.25rem) * var(--widget-font-scale, 1))'))
+  assert.ok(values.some(([key, value]) => key === 'font-size' && value === 'calc((min(var(--clock-size), 56px)) * var(--widget-font-scale, 1))'))
+  assert.ok(values.some(([key, value]) => key === 'font-size' && value === '.65em'))
+  assert.ok(values.some(([key, value]) => key === 'line-height' && value === '1.05'))
+})
 function setup(saved = DEFAULT_LAYOUT) {
   const writes = []
   let fail = false
@@ -127,6 +183,74 @@ function assertNoOverlap(widgets) {
   }
 }
 
+function legacyClockLayout(overrides = {}) {
+  const raw = clone(DEFAULT_LAYOUT)
+  raw.widgets = raw.widgets.filter(w => !['clock', 'weather'].includes(w.id))
+  raw.widgets.splice(1, 0, { id: 'clockWeather', type: 'clockWeather', title: '时钟天气', x: 3, y: 0, w: 6, h: 4, visible: true, ...overrides })
+  raw.widgetOpacities = { clockWeather: 0.1 }
+  raw.widgetFontScales = { clockWeather: 1.5 }
+  return raw
+}
+
+test('合并时钟天气迁移成左右独立组件，继承外观且重复加载不改变位置', () => {
+  const raw = legacyClockLayout({ x: 4, y: 1, w: 7, h: 3 })
+  raw.widgets = raw.widgets.filter(w => ['poetry', 'clockWeather'].includes(w.id))
+  const result = geometry.normalizeLayout(raw)
+  const clock = result.widgets.find(w => w.id === 'clock')
+  const weather = result.widgets.find(w => w.id === 'weather')
+  assert.deepEqual([clock.x, clock.y, clock.w, clock.h], [4, 1, 3, 3])
+  assert.deepEqual([weather.x, weather.y, weather.w, weather.h], [7, 1, 4, 3])
+  assert.equal(result.widgets.some(w => w.id === 'clockWeather'), false)
+  assert.equal(result.widgetOpacities.clock, 0.1)
+  assert.equal(result.widgetOpacities.weather, 0.1)
+  assert.equal(result.widgetFontScales.clock, 1.5)
+  assert.equal(result.widgetFontScales.weather, 1.5)
+  assertNoOverlap(result.widgets)
+  assert.deepEqual(geometry.normalizeLayout(result), result)
+  assert.equal(raw.widgets[1].id, 'clockWeather')
+})
+
+test('狭窄旧组件改为上下排列并自动避让，隐藏状态也能迁移', () => {
+  const raw = legacyClockLayout({ w: 4 })
+  const result = geometry.normalizeLayout(raw)
+  assert.deepEqual(result.widgets.filter(w => ['clock', 'weather'].includes(w.id)).map(w => [w.id, w.x, w.y, w.w, w.h]), [
+    ['clock', 3, 0, 4, 4], ['weather', 3, 4, 4, 4]
+  ])
+  assert.equal(result.widgets.find(w => w.id === 'search').y, 8)
+  assertNoOverlap(result.widgets)
+  assert.deepEqual(geometry.normalizeLayout(result), result)
+  const hidden = geometry.normalizeLayout(legacyClockLayout({ w: 4, visible: false }))
+  assert.equal(hidden.widgets.find(w => w.id === 'clock').visible, false)
+  assert.equal(hidden.widgets.find(w => w.id === 'weather').visible, false)
+  assert.equal(hidden.widgets.find(w => w.id === 'search').y, 4)
+})
+
+test('已保存的独立配置优先于旧组件，两个组件的编辑、备份恢复互不干扰', async () => {
+  const raw = legacyClockLayout()
+  raw.widgets.push({ ...DEFAULT_LAYOUT.widgets.find(w => w.id === 'clock'), x: 9, y: 0, visible: false })
+  raw.widgetFontScales.clock = 2
+  raw.widgetOpacities.clock = 0.4
+  const { store, writes } = setup(raw)
+  await store.loadLayout()
+  assert.equal(store.layout.widgets.find(w => w.id === 'clock').x, 9)
+  assert.equal(store.layout.widgets.find(w => w.id === 'clock').visible, false)
+  assert.equal(store.getWidgetFontScale('clock'), 2)
+  assert.equal(store.getWidgetFontScale('weather'), 1.5)
+  store.startEditing()
+  store.setWidgetFontScale('weather', 0.75)
+  store.setWidgetOpacity('weather', 0.2)
+  store.toggleWidgetVisibility('weather')
+  await store.stopEditing()
+  assert.equal(writes[0].widgetFontScales.clock, 2)
+  assert.equal(writes[0].widgetOpacities.clock, 0.4)
+  const imported = backup.parseConfigBackup({ app: 'personal-newtab', version: 1, sync: { layout: writes[0] }, local: {} })
+  assert.equal(imported.sync.layout.widgetFontScales.weather, 0.75)
+  assert.equal(imported.sync.layout.widgetOpacities.weather, 0.2)
+  assert.equal(imported.sync.layout.widgets.find(w => w.id === 'weather').visible, false)
+  const migratedBackup = backup.parseConfigBackup({ app: 'personal-newtab', version: 1, sync: { layout: legacyClockLayout() }, local: {} })
+  assert.equal(migratedBackup.sync.layout.widgetFontScales.weather, 1.5)
+})
+
 test('移动顶层组件时连锁向下避让，保留列、尺寸和无关组件', () => {
   const widget = (id, x, y, w = 4, visible = true) => ({ id, type: 'poetry', x, y, w, h: 4, visible })
   const layout = { ...DEFAULT_LAYOUT, widgets: [widget('active', 0, 0), widget('a', 0, 4), widget('b', 4, 4), widget('c', 0, 8, 8), widget('side', 8, 4), widget('hidden', 0, 4, 4, false)] }
@@ -148,7 +272,8 @@ test('缩放也能推开组件，紧贴不移动；隐藏组件不参与避让',
   assert.deepEqual(unchanged, layout.widgets)
   const result = geometry.resolvePlacement({ ...poetry, h: 10 }, 'poetry', layout)
   assertNoOverlap(result)
-  assert.equal(result.find(w => w.id === 'clockWeather').y, 0)
+  assert.equal(result.find(w => w.id === 'clock').y, 0)
+  assert.equal(result.find(w => w.id === 'weather').y, 0)
   assert.equal(result.find(w => w.id === 'search').y, 10)
   assert.equal(geometry.resolvePlacement({ ...poetry, w: 1 }, 'poetry', layout), null)
   assert.equal(geometry.resolvePlacement({ ...poetry, x: 12 }, 'poetry', layout), null)

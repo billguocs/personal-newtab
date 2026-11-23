@@ -1,6 +1,6 @@
 export interface Widget {
   id: string
-  type: 'search' | 'github' | 'zhihu' | 'v2ex' | 'navigation' | 'poetry' | 'clockWeather' | 'xueqiu'
+  type: 'search' | 'github' | 'zhihu' | 'v2ex' | 'navigation' | 'poetry' | 'clock' | 'weather' | 'xueqiu'
   title: string
   x: number
   y: number
@@ -46,6 +46,7 @@ export interface LayoutConfig {
   backgroundBlur?: number
   widgetOpacity?: number
   widgetOpacities?: Record<string, number>
+  widgetFontScales?: Record<string, number>
 }
 
 export interface SearchEngine {

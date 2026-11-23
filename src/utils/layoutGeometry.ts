@@ -5,7 +5,7 @@ export type Rect = Pick<Widget, 'x' | 'y' | 'w' | 'h'>
 export type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 export const MIN_SIZE: Record<Widget['type'], { w: number; h: number }> = {
   search: { w: 4, h: 3 }, navigation: { w: 3, h: 2 }, poetry: { w: 2, h: 3 },
-  clockWeather: { w: 4, h: 3 }, github: { w: 3, h: 4 }, zhihu: { w: 3, h: 4 },
+  clock: { w: 3, h: 3 }, weather: { w: 3, h: 3 }, github: { w: 3, h: 4 }, zhihu: { w: 3, h: 4 },
   v2ex: { w: 3, h: 4 }, xueqiu: { w: 5, h: 4 }
 }
 export function clamp(value: number, min: number, max: number) {
@@ -17,6 +17,9 @@ function finite(value: unknown, fallback: number) {
 export function normalizeOpacity(value: unknown, fallback = 0.85) {
   return clamp(finite(value, fallback), 0.1, 1)
 }
+export function normalizeFontScale(value: unknown) {
+  return Math.round(clamp(finite(value, 1), 0.5, 2) * 100) / 100
+}
 export function overlaps(a: Rect, b: Rect) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
 }
@@ -27,7 +30,7 @@ export function canPlace(rect: Rect, id: string, layout: LayoutConfig) {
 }
 // 当前组件固定在目标位置，其余组件按原来的行列顺序向下避让。
 // 每次都从原布局计算，避免指针来回移动时把组件越推越远。
-export function resolvePlacement(rect: Rect, id: string, layout: LayoutConfig): Widget[] | null {
+export function resolvePlacement(rect: Rect, id: string, layout: LayoutConfig, forceReflow = false): Widget[] | null {
   const active = layout.widgets.find(widget => widget.id === id)
   if (!active || ![rect.x, rect.y, rect.w, rect.h].every(Number.isSafeInteger) ||
     rect.x < 0 || rect.y < 0 || rect.w < MIN_SIZE[active.type].w ||
@@ -35,7 +38,7 @@ export function resolvePlacement(rect: Rect, id: string, layout: LayoutConfig): 
   const widgets = layout.widgets.map(widget => ({ ...widget }))
   const moved = widgets.find(widget => widget.id === id)!
   Object.assign(moved, { x: rect.x, y: rect.y, w: rect.w, h: rect.h })
-  if (!moved.visible || ['x', 'y', 'w', 'h'].every(key => active[key as keyof Rect] === rect[key as keyof Rect])) return widgets
+  if (!moved.visible || !forceReflow && ['x', 'y', 'w', 'h'].every(key => active[key as keyof Rect] === rect[key as keyof Rect])) return widgets
   const placed: Widget[] = [moved]
   const others = widgets.filter(widget => widget.visible && widget.id !== id)
     .sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id))
@@ -79,7 +82,25 @@ export function resizeRect(start: Widget, direction: ResizeDirection, dx: number
 // 只修复非法字段；旧布局的有效坐标和自定义不透明度继续保留。
 export function normalizeLayout(raw: Partial<LayoutConfig> | null): LayoutConfig {
   const gridCols = clamp(Math.round(finite(raw?.gridCols, 12)), 6, 24)
-  const saved = Array.isArray(raw?.widgets) ? raw.widgets : []
+  const saved = Array.isArray(raw?.widgets) ? [...raw.widgets] : []
+  // 旧版合并卡片按原位置拆分；太窄时纵向排列，避免压缩到最小宽度以下。
+  const legacy = saved.find(widget => widget?.id === 'clockWeather')
+  const migratedIds: string[] = []
+  if (legacy) {
+    const w = clamp(Math.round(finite(legacy.w, 6)), 3, gridCols)
+    const h = Math.max(3, Math.round(finite(legacy.h, 4)))
+    const x = clamp(Math.round(finite(legacy.x, 3)), 0, gridCols - w)
+    const y = Math.max(0, Math.round(finite(legacy.y, 0)))
+    const sideBySide = w >= MIN_SIZE.clock.w + MIN_SIZE.weather.w
+    const clockWidth = sideBySide ? Math.floor(w / 2) : w
+    for (const id of ['clock', 'weather'] as const) {
+      if (saved.some(widget => widget?.id === id)) continue
+      saved.push({ ...legacy, id, type: id, x: id === 'weather' && sideBySide ? x + clockWidth : x,
+        y: id === 'weather' && !sideBySide ? y + h : y,
+        w: sideBySide ? (id === 'clock' ? clockWidth : w - clockWidth) : w, h })
+      migratedIds.push(id)
+    }
+  }
   const widgets = DEFAULT_LAYOUT.widgets.map(defaultWidget => {
     const old = saved.find(widget => widget && widget.id === defaultWidget.id)
     const min = MIN_SIZE[defaultWidget.type]
@@ -91,13 +112,24 @@ export function normalizeLayout(raw: Partial<LayoutConfig> | null): LayoutConfig
       visible: typeof old?.visible === 'boolean' ? old.visible : defaultWidget.visible }
   })
   const widgetOpacities: Record<string, number> = {}
+  const widgetFontScales: Record<string, number> = {}
   for (const widget of widgets) {
-    const value = raw?.widgetOpacities?.[widget.id]
+    const sourceId = migratedIds.includes(widget.id) ? 'clockWeather' : widget.id
+    const value = raw?.widgetOpacities?.[widget.id] ?? raw?.widgetOpacities?.[sourceId]
     if (typeof value === 'number' && Number.isFinite(value)) widgetOpacities[widget.id] = normalizeOpacity(value)
+    const scale = raw?.widgetFontScales?.[widget.id] ?? raw?.widgetFontScales?.[sourceId]
+    if (typeof scale === 'number' && Number.isFinite(scale)) widgetFontScales[widget.id] = normalizeFontScale(scale)
   }
-  return { widgets, gridCols,
+  const normalized: LayoutConfig = { widgets, gridCols,
     gridRowHeight: clamp(finite(raw?.gridRowHeight, 45), 20, 100),
     gap: clamp(finite(raw?.gap, 16), 0, 48),
-    widgetOpacity: normalizeOpacity(raw?.widgetOpacity), widgetOpacities,
+    widgetOpacity: normalizeOpacity(raw?.widgetOpacity), widgetOpacities, widgetFontScales,
     backgroundBlur: clamp(finite(raw?.backgroundBlur, 24), 0, 40) }
+  // 迁移新增卡片遇到旧布局中的其他组件时，复用向下连锁避让。
+  for (const id of migratedIds) {
+    const widget = normalized.widgets.find(item => item.id === id)!
+    if (!widget.visible || canPlace(widget, id, normalized)) continue
+    normalized.widgets = resolvePlacement(widget, id, normalized, true) ?? normalized.widgets
+  }
+  return normalized
 }

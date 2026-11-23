@@ -37,6 +37,7 @@ npm run test:layout    # Node 内置测试：网格边界、碰撞、布局草�
 - `layoutStore` 区分已提交布局与编辑草稿。只有“完成”成功保存后退出，“取消”恢复已提交值；保存失败保留草稿。支持分组撤销/重做（最多 50 步），禁止在保存期间修改或重复提交。
 - 背景不透明度：全局 `layout.widgetOpacity`（默认 0.85）+ `layout.widgetOpacities[id]` 覆盖，删除覆盖即跟随全局；独立的 `backgroundBlur` 范围为 0–40px。设置面板为 `LayoutInspector.vue`。主题 alpha 不再叠乘卡片 alpha，`--card-bg` 使用主题的不透明底色。
 - 编辑模式支持方向键移动、Shift+方向键缩放、Ctrl/Cmd+Z 撤销、Ctrl/Cmd+Shift+Z 重做；拖拽中 Escape 只取消本次手势，再按 Escape 取消整次编辑。窄屏编辑使用可横向滚动的桌面画布，阅读模式保持单列。
+- 字号按组件保存在布局的 widgetFontScales 中（0.5–2，默认 1），通过草稿支持预览、撤销、取消和同步/备份；恢复默认布局同时重置字号。倍率仅挂在 WidgetFrame 的内容层，编辑把手和 Teleport 弹窗不继承。tooling/widgetTypography.ts 在 Tailwind 展开后为绝对字号与固定行高乘 CSS 变量，em/% 和无单位行高不重复缩放；新增文字样式仍写正常字号，不手动再乘倍率，也不使用 zoom/transform 放大整个组件。
 
 **新增一个 Widget 必须同步修改以下位置**，否则已保存布局会把它过滤掉或直接不渲染：
 
@@ -64,10 +65,11 @@ npm run test:layout    # Node 内置测试：网格边界、碰撞、布局草�
 
 - 默认使用 `src/utils/themePresets.ts` 的固定中性色浅/深主题；首次升级通过 `appearanceVersion: 2` 切换新主题，旧配色保留在主题列表。壁纸取色仅作为可选方案。
 - 列表默认背景透明，排名无色块，只有当前行 hover/focus 时显示 `--row-hover`；不要再给每行添加常驻胶囊底色。组件透明度只作用于卡片底色，悬停组件不改变透明度。
-- `poetry` 和 `clockWeather` 在 `WidgetFrame` 中使用透明外壳，由组件自行绘制线装书、现代时钟天气背景。仍须继承 `--widget-opacity` / `--widget-blur`，不允许给整个组件（含文字）设置 opacity；线装书多层背景统一放在 `.book-art` 中控制不透明度，避免叠乘。
+- `poetry`、`clock` 和 `weather` 在 `WidgetFrame` 中使用透明外壳，由组件自行绘制线装书、现代时钟天气背景。仍须继承 `--widget-opacity` / `--widget-blur`，不允许给整个组件（含文字）设置 opacity；线装书多层背景统一放在 `.book-art` 中控制不透明度，避免叠乘。
 - 诗词标题和作者用 Grid 的 `max-content` 列宽随竖排换列扩展，不设固定宽度上限；与正文共用右起的横向滚动区域。不要恢复裁切元数据或嵌套正文滚动，否则长标题会被遮挡或挤压正文。
 - `useElementSize` 使用 ResizeObserver 读取组件外部尺寸以适配拖拽缩放；不要用会随 padding 改变的 contentRect 值切换尺寸 class，以免产生 ResizeObserver 循环。`WeatherGlyph.vue` 为本地 SVG 天气图标，不需要远程素材。
-- 时钟天气正文固定左右各 50%，不添加顶部 padding；`WeatherScene.vue` 根据当前 WMO 天气码绘制右栏动态背景，雨雪使用 transform 动画，装饰单独继承 `--widget-opacity`，并支持 `prefers-reduced-motion`。
+- 时钟（Clock.vue）和天气（WeatherWidget.vue / Weather.vue）为独立 Widget，分别调整位置、尺寸、字号、透明度和显示状态。normalizeLayout 将旧 clockWeather 拆分，宽度足够时左右排列，否则上下排列并自动避让，继承旧外观和可见性，不覆盖已保存的独立配置。
+- 天气在可滚动视口中按内容高度自然展开；背景与 WeatherScene 动画统一置于 weather-art 内，完整覆盖城市、实时天气及预报，并只乘一次 --widget-opacity。预报根据可用宽度及字号自动换列，不可恢复固定半宽 weather-section 或固定高度裁切。保留 prefers-reduced-motion 支持。
 - `src/utils/themeExtractor.ts` 用 `node-vibrant/browser` 从壁纸取色，生成 3–5 个 `Theme`；`themeStore` 支持 preview（临时应用）和 applyTheme（持久化）。
 - `applyThemeToCSS()` 同时写入 `--theme-*` 和旧变量 `--accent-color`、`--text-primary`、`--glass-bg`、`--bg-secondary` 等。**组件样式统一用旧变量**，才能同时兼容主题和深浅色。
 - 深浅色由 `styles.css` 中的 `:root` / `.dark` 变量覆盖实现，不是 Tailwind 的 `dark:` 变体（配置里也没有 `darkMode: 'class'`）。

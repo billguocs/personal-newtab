@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <title>个性化新标签页 · 自在之窗</title>
+  <desc>靛蓝圆角方形中，三块错落的卡片组成可自由布局的窗口，暖杏色卡片象征每日的新鲜内容。</desc>
+  <defs>
+    <linearGradient id="tile" x1="32" y1="16" x2="224" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5975ED"/>
+      <stop offset="0.55" stop-color="#425BD2"/>
+      <stop offset="1" stop-color="#3043AA"/>
+    </linearGradient>
+    <linearGradient id="light" x1="58" y1="56" x2="116" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9EEFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="224" height="224" rx="54" fill="url(#tile)"/>
+  <rect x="56" y="56" width="64" height="144" rx="15" fill="url(#light)"/>
+  <rect x="136" y="56" width="64" height="64" rx="15" fill="#C0CEFF"/>
+  <rect x="136" y="136" width="64" height="64" rx="15" fill="#F5C78D"/>
+</svg>

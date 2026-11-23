@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import type { LayoutConfig } from '@/types'
 import { storage } from '@/utils/storage'
 import { DEFAULT_LAYOUT } from '@/utils/layoutDefaults'
-import { normalizeLayout, normalizeOpacity, canPlace, clamp, resolvePlacement } from '@/utils/layoutGeometry'
+import { normalizeLayout, normalizeOpacity, normalizeFontScale, canPlace, clamp, resolvePlacement } from '@/utils/layoutGeometry'
 import type { Rect } from '@/utils/layoutGeometry'
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value))
@@ -130,9 +130,20 @@ export const useLayoutStore = defineStore('layout', () => {
   function setBackgroundBlur(value: number) {
     change(target => { target.backgroundBlur = clamp(value, 0, 40) })
   }
+  function getWidgetFontScale(id: string) {
+    return layout.value.widgetFontScales?.[id] ?? 1
+  }
+  function setWidgetFontScale(id: string, value: number) {
+    change(target => {
+      if (!target.widgets.some(widget => widget.id === id)) return
+      const scale = normalizeFontScale(value)
+      if (scale === 1) delete target.widgetFontScales?.[id]
+      else (target.widgetFontScales ??= {})[id] = scale
+    })
+  }
   return { layout, isEditing, isSaving, saveError, selectedId, selectedWidget, interactionActive,
     feedback, canUndo, canRedo, visibleWidgets, widgetOpacities, loadLayout, startEditing,
     stopEditing, cancelEditing, beginChange, endChange, undo, redo, applyRect,
     toggleWidgetVisibility, resetLayout, updateWidgetOpacity, setWidgetOpacity, clearWidgetOpacity,
-    getWidgetOpacity, setBackgroundBlur }
+    getWidgetOpacity, setBackgroundBlur, getWidgetFontScale, setWidgetFontScale }
 })

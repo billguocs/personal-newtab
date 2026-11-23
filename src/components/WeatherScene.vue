@@ -44,7 +44,7 @@ function particleStyle(n: number) {
 </script>
 
 <style scoped>
-.weather-scene { position: absolute; inset: 0; z-index: -1; overflow: hidden; border-radius: 16px; pointer-events: none; opacity: var(--widget-opacity, .85); background: linear-gradient(155deg, rgba(161,204,235,.1), rgba(129,180,222,.2)); }
+.weather-scene { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: linear-gradient(155deg, rgba(161,204,235,.1), rgba(129,180,222,.2)); }
 .sun, .partly { background: linear-gradient(145deg, rgba(255,220,137,.18), rgba(141,200,241,.25)); }
 .rain, .storm { background: linear-gradient(155deg, rgba(91,123,160,.24), rgba(123,164,198,.12)); }
 .snow { background: linear-gradient(145deg, rgba(204,226,243,.24), rgba(153,190,219,.2)); }

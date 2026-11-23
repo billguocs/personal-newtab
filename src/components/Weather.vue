@@ -1,6 +1,6 @@
 <template>
   <div ref="element" class="weather-widget" :class="{ compact: width < 180 }">
-    <WeatherScene :code="weather?.weatherCode" />
+    <div class="weather-art" aria-hidden="true"><WeatherScene :code="weather?.weatherCode" /></div>
     <div v-if="loading" class="weather-loading" role="status"><div class="spinner"></div><span>更新天气中</span></div>
     <button v-else-if="weather" class="weather-content" :aria-label="shortLocationName + '，' + weatherInfo.description + '，' + weather.temperature + '摄氏度。点击设置位置'" @click="showSettings = true">
       <span class="weather-city"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M15.5 8c0 4-5.5 8.5-5.5 8.5S4.5 12 4.5 8a5.5 5.5 0 1 1 11 0Z" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="8" r="1.7" stroke="currentColor" stroke-width="1.4"/></svg><span :title="fullLocationName">{{ shortLocationName }}</span><span class="city-edit" aria-hidden="true">↗</span></span>
@@ -192,24 +192,25 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.weather-widget { position: relative; isolation: isolate; min-width: 0; width: 100%; padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; color: var(--clock-ink, var(--text-primary)); }
+.weather-widget { position: relative; isolation: isolate; flex: 1 0 auto; min-width: 0; width: 100%; min-height: 100%; padding: 18px 20px; display: flex; flex-direction: column; justify-content: center; color: var(--clock-ink, var(--text-primary)); }
+.weather-art { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--weather-surface); opacity: var(--widget-opacity, .85); }
 .weather-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 0; color: var(--clock-muted, var(--text-secondary)); font-size: 11px; }
 .spinner { width: 18px; height: 18px; border: 2px solid var(--clock-muted, var(--border-color)); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.weather-content { display: flex; flex-direction: column; gap: 7px; width: 100%; text-align: left; border-radius: 10px; background: transparent; color: inherit; }
+.weather-content { display: flex; flex: 0 0 auto; flex-direction: column; gap: 7px; width: 100%; text-align: left; border-radius: 10px; background: transparent; color: inherit; }
 .weather-city { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--clock-muted, var(--text-secondary)); min-width: 0; width: 100%; }
 .weather-city svg { width: 13px; height: 13px; flex-shrink: 0; }
 .weather-city > span:first-of-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .city-edit { margin-left: auto; opacity: .5; }
 .weather-content:hover .city-edit, .weather-content:focus-visible .city-edit { opacity: 1; }
-.weather-main { display: flex; align-items: center; gap: 10px; }
+.weather-main { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .weather-icon { width: 58px; height: 58px; flex-shrink: 0; }
-.weather-info { display: flex; flex-direction: column; gap: 3px; }
+.weather-info { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .temperature { font-size: 34px; line-height: 1; font-weight: 350; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
 .temperature small { font-size: 14px; font-weight: 400; letter-spacing: 0; margin-left: 2px; color: var(--clock-muted, var(--text-secondary)); }
 .weather-condition { font-size: 10px; color: var(--clock-muted, var(--text-secondary)); }
 .weather-details { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 9px; color: var(--clock-muted, var(--text-secondary)); }
-.forecast-compact { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; border-top: 1px solid rgba(113,136,161,.15); padding-top: 8px; margin-top: 2px; }
+.forecast-compact { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 4em), 1fr)); gap: 12px; border-top: 1px solid rgba(113,136,161,.15); padding-top: 8px; margin-top: 2px; }
 .forecast-day { display: flex; align-items: center; flex-direction: column; gap: 2px; }
 .day-name { color: var(--clock-muted, var(--text-secondary)); font-size: 9px; }
 .day-icon { width: 25px; height: 25px; }
@@ -222,7 +223,6 @@ onMounted(async () => {
 .compact .weather-icon { width: 40px; height: 40px; }
 .compact.weather-widget { padding: 10px; }
 .compact .temperature { font-size: 29px; }
-.compact .weather-details { display: none; }
 .compact .forecast-compact { gap: 5px; }
 .compact .day-temp { flex-direction: column; gap: 1px; }
 .compact .empty-weather-icon { width: 44px; height: 44px; }
