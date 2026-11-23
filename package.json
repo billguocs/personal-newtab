@@ -1,6 +1,6 @@
 {
   "name": "personal-newtab",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "个性化新标签页 Chrome扩展",
   "type": "module",
   "scripts": {
@@ -8,7 +8,8 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.ts --fix",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "test:layout": "node --test tests/layout.test.cjs"
   },
   "dependencies": {
     "node-vibrant": "^4.0.4",

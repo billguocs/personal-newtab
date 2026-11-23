@@ -218,6 +218,15 @@ export async function extractThemes(imageUrl: string): Promise<Theme[]> {
   }
 }
 
+// 卡片的 alpha 由布局统一管理，不再与旧主题中的 alpha 相乘。
+export function opaqueSurface(color: string): string {
+  const rgba = color.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i)
+  if (rgba) return `rgb(${rgba[1]}, ${rgba[2]}, ${rgba[3]})`
+  if (/^#[\da-f]{8}$/i.test(color)) return color.slice(0, 7)
+  if (/^#[\da-f]{4}$/i.test(color)) return color.slice(0, 4)
+  return color
+}
+
 // 应用主题到 CSS 变量
 export function applyThemeToCSS(theme: Theme): void {
   const root = document.documentElement
@@ -237,6 +246,7 @@ export function applyThemeToCSS(theme: Theme): void {
   root.style.setProperty('--text-primary', theme.colors.text)
   root.style.setProperty('--text-secondary', theme.colors.textSecondary)
   root.style.setProperty('--glass-bg', theme.colors.surface)
+  root.style.setProperty('--card-bg', opaqueSurface(theme.colors.surface))
   root.style.setProperty('--glass-border', theme.colors.border)
   root.style.setProperty('--bg-secondary', theme.colors.background)
   root.style.setProperty('--bg-primary', theme.colors.surface)

@@ -43,6 +43,7 @@ export interface LayoutConfig {
   gridCols: number
   gridRowHeight: number
   gap: number
+  backgroundBlur?: number
   widgetOpacity?: number
   widgetOpacities?: Record<string, number>
 }

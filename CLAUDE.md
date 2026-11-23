@@ -14,9 +14,10 @@ npm run dev            # Vite + CRXJS 开发服务器；在 chrome://extensions 
 npm run build          # 先 vue-tsc 类型检查，再 vite build，产物在 dist/
 npm run lint           # ESLint 检查并自动修复 .vue / .ts
 npm run typecheck      # vue-tsc --noEmit
+npm run test:layout    # Node 内置测试：网格边界、碰撞、布局草稿、撤销和持久化
 ```
 
-本项目**没有测试框架和测试脚本**。验证改动的方式是 `npm run typecheck`、`npm run lint`，然后在 Chrome 中重新加载 `dist/` 手测。`dist/` 已被 gitignore，但仓库里存在本地构建产物。
+布局回归测试使用 Node 内置 test runner，测试文件为 `tests/layout.test.cjs`，不额外依赖测试框架。布局改动运行 `npm run test:layout` 和 `npm run build`，再在 Chrome 中重新加载 `dist/` 检查交互。`dist/` 已被 gitignore，但仓库里存在本地构建产物。
 
 ## 入口与启动流程
 
@@ -32,17 +33,19 @@ npm run typecheck      # vue-tsc --noEmit
 ## Widget 布局系统（最需要小心）
 
 - 12 列 CSS Grid，`Widget.x/y` 从 **0** 开始，`GridLayout.getItemStyle()` 转成 CSS Grid 的 **1-based** 行列。
-- 每个组件高度为 `h * gridRowHeight`（默认 45px），`gap` 默认 16，外部 padding 24/32。
-- 拖拽和八向缩放是 `GridLayout.vue` 里手写的 mousedown/mousemove/mouseup 逻辑（不是 vue-draggable-plus；后者只用于 `Navigation.vue` 内的链接排序），鼠标抬起时自动 `saveLayout()`。
-- 透明度：全局 `layout.widgetOpacity`（默认 0.85）+ 每组件 `widgetOpacities[id]` 覆盖，通过 `layoutStore.getWidgetOpacity(id)` 读取。
+- 组件高度为 `h * gridRowHeight + (h - 1) * gap`（默认行高 45px、间距 16px），显式设置 `gridAutoRows`。`utils/layoutGeometry.ts` 是渲染、移动、八向缩放、最小尺寸和碰撞检测的唯一计算来源。
+- `WidgetFrame.vue` 提供选中态和编辑把手；`composables/useWidgetInteraction.ts` 用 Pointer Events + 画布指针捕获处理鼠标/触屏，先显示落点预览，松手时只有不重叠的位置才能应用到草稿。北/西缩放固定对侧边缘。
+- `layoutStore` 区分已提交布局与编辑草稿。只有“完成”成功保存后退出，“取消”恢复已提交值；保存失败保留草稿。支持分组撤销/重做（最多 50 步），禁止在保存期间修改或重复提交。
+- 背景不透明度：全局 `layout.widgetOpacity`（默认 0.85）+ `layout.widgetOpacities[id]` 覆盖，删除覆盖即跟随全局；独立的 `backgroundBlur` 范围为 0–40px。设置面板为 `LayoutInspector.vue`。主题 alpha 不再叠乘卡片 alpha，`--card-bg` 使用主题的不透明底色。
+- 编辑模式支持方向键移动、Shift+方向键缩放、Ctrl/Cmd+Z 撤销、Ctrl/Cmd+Shift+Z 重做；拖拽中 Escape 只取消本次手势，再按 Escape 取消整次编辑。窄屏编辑使用可横向滚动的桌面画布，阅读模式保持单列。
 
 **新增一个 Widget 必须同步修改以下位置**，否则已保存布局会把它过滤掉或直接不渲染：
 
 1. `src/types/index.ts`：`Widget['type']` 联合类型
-2. 默认布局：`src/stores/layout.ts` 和 `src/utils/storage.ts` 各有一份**重复的** `DEFAULT_LAYOUT`，两处都要改
+2. 默认布局：`src/utils/layoutDefaults.ts` 中的 `DEFAULT_LAYOUT`（存储与 Store 共用）；最小尺寸在 `layoutGeometry.ts` 的 `MIN_SIZE` 中声明
 3. `src/components/GridLayout.vue`：`defineAsyncComponent` 导入 + `getWidgetComponent()` 映射
 
-`layoutStore.loadLayout()` 会丢弃默认布局中不存在的 id，并把默认布局里新增的组件追加到已保存布局中。
+`layoutStore.loadLayout()` 通过 `normalizeLayout()` 丢弃未知 id、补齐新增组件、校验坐标/尺寸/不透明度，保留旧布局有效的坐标与数值。
 
 ## 存储分层
 

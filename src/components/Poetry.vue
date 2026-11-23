@@ -34,7 +34,7 @@ onMounted(() => {
 <style scoped>
 .poetry-widget {
   @apply h-full flex items-center justify-center;
-  background: linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.5) 100%);
+  background: transparent;
   border-radius: 16px;
   position: relative;
   overflow: hidden;
@@ -52,13 +52,13 @@ onMounted(() => {
 
 .error {
   @apply text-center;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
 }
 
 .poetry-content {
   display: flex;
   flex-direction: row-reverse;
-  color: white;
+  color: var(--text-primary);
   height: 100%;
   padding: 12px;
   gap: 8px;
@@ -68,7 +68,7 @@ onMounted(() => {
   writing-mode: vertical-rl;
   font-size: 12px;
   opacity: 0.85;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  text-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -87,7 +87,7 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 500;
   line-height: 1.8;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 0, 0, 0.4);
+  text-shadow: none;
   font-family: 'ZCOOL XiaoWei', 'Ma Shan Zheng', 'ZCOOL QingKe HuangYou', 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', serif;
   height: 100%;
   overflow: hidden;

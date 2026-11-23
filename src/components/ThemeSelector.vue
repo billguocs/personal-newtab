@@ -57,17 +57,7 @@
                 @input="(e) => updateColor('text', (e.target as HTMLInputElement).value)"
               />
             </div>
-            <div class="color-item">
-              <label>背景透明度</label>
-              <input
-                type="range"
-                min="0.3"
-                max="1"
-                step="0.05"
-                :value="getBackgroundAlpha()"
-                @input="(e) => updateBackgroundAlpha(parseFloat((e.target as HTMLInputElement).value))"
-              />
-            </div>
+            <p class="appearance-hint">背景不透明度和模糊强度可在「编辑布局」中统一调整。</p>
           </div>
         </div>
 
@@ -132,27 +122,6 @@ function getThemePreviewStyle(theme: Theme) {
     background: theme.colors.background,
     borderColor: theme.colors.primary,
     color: theme.colors.text
-  }
-}
-
-function getBackgroundAlpha(): number {
-  const bg = themeStore.activeTheme?.colors.surface || 'rgba(255,255,255,0.85)'
-  const match = bg.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/)
-  return match ? parseFloat(match[1]) : 1
-}
-
-function updateBackgroundAlpha(alpha: number) {
-  const bg = themeStore.activeTheme?.colors.surface || '#ffffff'
-  // 提取基础颜色
-  const color = /^#[0-9a-f]{6}$/i.test(bg) ? `rgb(${parseInt(bg.slice(1, 3), 16)}, ${parseInt(bg.slice(3, 5), 16)}, ${parseInt(bg.slice(5, 7), 16)})` : bg
-  const hexMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
-  if (hexMatch) {
-    const r = hexMatch[1]
-    const g = hexMatch[2]
-    const b = hexMatch[3]
-    const newBg = `rgba(${r}, ${g}, ${b}, ${alpha})`
-    themeStore.updateThemeColor('background', newBg)
-    themeStore.updateThemeColor('surface', newBg)
   }
 }
 
@@ -428,4 +397,5 @@ function resetTheme() {
   opacity: 0.9;
   transform: scale(1.02);
 }
+.appearance-hint { color: var(--text-secondary); font-size: 12px; line-height: 1.7; grid-column: 1 / -1; }
 </style>

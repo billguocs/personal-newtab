@@ -3,10 +3,11 @@
     <Wallpaper />
 
     <EditModeIndicator />
+    <LayoutInspector />
 
     <div class="main-content" :class="{ 'editing': layoutStore.isEditing }">
       <!-- 只有在布局加载完成后才渲染 GridLayout -->
-      <GridLayout v-if="layoutStore.visibleWidgets.length > 0" />
+      <GridLayout v-if="layoutStore.visibleWidgets.length > 0 || layoutStore.isEditing" />
       
       <!-- 如果没有可见组件，显示提示 -->
       <div v-else-if="isLoaded" class="no-widgets-hint">
@@ -129,6 +130,7 @@ import Wallpaper from '@/components/Wallpaper.vue'
 import GridLayout from '@/components/GridLayout.vue'
 import SettingButton from '@/components/SettingButton.vue'
 import EditModeIndicator from '@/components/EditModeIndicator.vue'
+import LayoutInspector from '@/components/LayoutInspector.vue'
 import ThemeSelector from '@/components/ThemeSelector.vue'
 import { useThemeStore } from '@/stores/theme'
 
