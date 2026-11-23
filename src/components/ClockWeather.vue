@@ -44,19 +44,18 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
 .clock-eyebrow { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 2px; color: var(--clock-muted); }
 .clock-eyebrow i { width: 5px; height: 5px; border-radius: 50%; background: var(--clock-accent); }
 .clock-greeting { font-size: 10px; letter-spacing: 1px; color: var(--clock-muted); }
-.clock-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, .85fr); align-items: center; gap: 24px; flex: 1; min-height: 0; padding-top: 12px; }
-.clock-section { min-width: 0; }
+.clock-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; flex: 1; min-height: 0; padding-top: 0; }
+.clock-section { min-width: 0; padding-right: 16px; display: flex; flex-direction: column; justify-content: center; }
 .time { display: flex; align-items: baseline; font-size: var(--clock-size, 72px); line-height: 1.05; font-weight: 300; letter-spacing: -4px; font-variant-numeric: tabular-nums; font-family: 'Segoe UI', 'Helvetica Neue', sans-serif; }
 .time-colon { font-size: .65em; padding: 0 7px; color: var(--clock-accent); transform: translateY(-.08em); font-weight: 300; }
 .date { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; font-size: 12px; margin-top: 12px; color: var(--clock-muted); }
 .date-dot { opacity: .5; }
 .clock-caption { display: block; margin-top: 17px; color: var(--clock-muted); font-size: 10px; letter-spacing: 1px; opacity: .8; }
-.weather-section { min-width: 0; border-left: 1px solid rgba(113,136,161,.18); padding-left: 22px; }
+.weather-section { min-width: 0; min-height: 0; display: flex; border-left: 1px solid rgba(113,136,161,.18); }
 .clock-dark { --clock-ink: #e3edf9; --clock-muted: #94abc4; --clock-accent: #91b9f5; --weather-cloud: #4c6685; --weather-cloud-line: #9fb6d2; }
 .clock-dark::before { background: radial-gradient(ellipse at 100% 0%, #284565, transparent 70%), linear-gradient(125deg, #192b43, #21364f); }
 .compact { padding: 18px 20px; }
-.compact .clock-body { gap: 16px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
-.compact .weather-section { padding-left: 16px; }
+.compact .clock-section { padding-right: 10px; }
 .compact .clock-caption { display: none; }
 .compact .clock-greeting { font-size: 9px; letter-spacing: 0; }
 .short { padding: 14px 20px; }

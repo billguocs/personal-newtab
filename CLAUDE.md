@@ -34,7 +34,7 @@ npm run test:layout    # Node 内置测试：网格边界、碰撞、布局草�
 
 - 12 列 CSS Grid，`Widget.x/y` 从 **0** 开始，`GridLayout.getItemStyle()` 转成 CSS Grid 的 **1-based** 行列。
 - 组件高度为 `h * gridRowHeight + (h - 1) * gap`（默认行高 45px、间距 16px），显式设置 `gridAutoRows`。`utils/layoutGeometry.ts` 是渲染、移动、八向缩放、最小尺寸和碰撞检测的唯一计算来源。
-- `WidgetFrame.vue` 提供选中态和编辑把手；`composables/useWidgetInteraction.ts` 用 Pointer Events + 画布指针捕获处理鼠标/触屏，先显示落点预览，松手时只有不重叠的位置才能应用到草稿。北/西缩放固定对侧边缘。
+- `WidgetFrame.vue` 提供选中态和编辑把手；`composables/useWidgetInteraction.ts` 用 Pointer Events + 画布指针捕获处理鼠标/触屏。`layoutGeometry.resolvePlacement` 固定当前组件的落点，其他可见组件按原行列顺序向下连锁避让，保留列与尺寸；移动、缩放、键盘共用此逻辑。手势预览始终基于未修改的草稿计算所有组件位置，松手整体提交为一步撤销，Escape/取消手势全部还原。北/西缩放固定对侧边缘。
 - `layoutStore` 区分已提交布局与编辑草稿。只有“完成”成功保存后退出，“取消”恢复已提交值；保存失败保留草稿。支持分组撤销/重做（最多 50 步），禁止在保存期间修改或重复提交。
 - 背景不透明度：全局 `layout.widgetOpacity`（默认 0.85）+ `layout.widgetOpacities[id]` 覆盖，删除覆盖即跟随全局；独立的 `backgroundBlur` 范围为 0–40px。设置面板为 `LayoutInspector.vue`。主题 alpha 不再叠乘卡片 alpha，`--card-bg` 使用主题的不透明底色。
 - 编辑模式支持方向键移动、Shift+方向键缩放、Ctrl/Cmd+Z 撤销、Ctrl/Cmd+Shift+Z 重做；拖拽中 Escape 只取消本次手势，再按 Escape 取消整次编辑。窄屏编辑使用可横向滚动的桌面画布，阅读模式保持单列。
@@ -65,6 +65,7 @@ npm run test:layout    # Node 内置测试：网格边界、碰撞、布局草�
 - 列表默认背景透明，排名无色块，只有当前行 hover/focus 时显示 `--row-hover`；不要再给每行添加常驻胶囊底色。组件透明度只作用于卡片底色，悬停组件不改变透明度。
 - `poetry` 和 `clockWeather` 在 `WidgetFrame` 中使用透明外壳，由组件自行绘制线装书、现代时钟天气背景。仍须继承 `--widget-opacity` / `--widget-blur`，不允许给整个组件（含文字）设置 opacity；线装书多层背景统一放在 `.book-art` 中控制不透明度，避免叠乘。
 - `useElementSize` 使用 ResizeObserver 读取组件外部尺寸以适配拖拽缩放；不要用会随 padding 改变的 contentRect 值切换尺寸 class，以免产生 ResizeObserver 循环。`WeatherGlyph.vue` 为本地 SVG 天气图标，不需要远程素材。
+- 时钟天气正文固定左右各 50%，不添加顶部 padding；`WeatherScene.vue` 根据当前 WMO 天气码绘制右栏动态背景，雨雪使用 transform 动画，装饰单独继承 `--widget-opacity`，并支持 `prefers-reduced-motion`。
 - `src/utils/themeExtractor.ts` 用 `node-vibrant/browser` 从壁纸取色，生成 3–5 个 `Theme`；`themeStore` 支持 preview（临时应用）和 applyTheme（持久化）。
 - `applyThemeToCSS()` 同时写入 `--theme-*` 和旧变量 `--accent-color`、`--text-primary`、`--glass-bg`、`--bg-secondary` 等。**组件样式统一用旧变量**，才能同时兼容主题和深浅色。
 - 深浅色由 `styles.css` 中的 `:root` / `.dark` 变量覆盖实现，不是 Tailwind 的 `dark:` 变体（配置里也没有 `darkMode: 'class'`）。

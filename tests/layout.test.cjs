@@ -100,7 +100,7 @@ test('真实存储读取兼容旧数字键数组格式', async () => {
   } finally { global.chrome = previous }
 })
 
-test('编辑草稿不写存储；取消完整还原；碰撞拒绝应用', async () => {
+test('编辑草稿不写存储；取消完整还原；越界拒绝应用', async () => {
   const { store, writes } = setup()
   await store.loadLayout()
   const before = clone(store.layout)
@@ -111,10 +111,84 @@ test('编辑草稿不写存储；取消完整还原；碰撞拒绝应用', async
   assert.equal(store.applyRect('poetry', { x: 0, y: 30, w: 3, h: 4 }), true)
   store.setWidgetOpacity('poetry', 0.1)
   store.setBackgroundBlur(8)
-  assert.equal(store.applyRect('poetry', { x: 3, y: 0, w: 3, h: 4 }), false)
+  assert.equal(store.applyRect('poetry', { x: -1, y: 0, w: 3, h: 4 }), false)
   assert.equal(writes.length, 0)
   store.cancelEditing()
   assert.deepEqual(clone(store.layout), before)
+})
+
+function assertNoOverlap(widgets) {
+  const visible = widgets.filter(widget => widget.visible)
+  for (let i = 0; i < visible.length; i++) {
+    for (let j = i + 1; j < visible.length; j++) {
+      assert.equal(geometry.overlaps(visible[i], visible[j]), false, `${visible[i].id} / ${visible[j].id}`)
+    }
+  }
+}
+
+test('移动顶层组件时连锁向下避让，保留列、尺寸和无关组件', () => {
+  const widget = (id, x, y, w = 4, visible = true) => ({ id, type: 'poetry', x, y, w, h: 4, visible })
+  const layout = { ...DEFAULT_LAYOUT, widgets: [widget('active', 0, 0), widget('a', 0, 4), widget('b', 4, 4), widget('c', 0, 8, 8), widget('side', 8, 4), widget('hidden', 0, 4, 4, false)] }
+  const before = clone(layout)
+  const rect = { x: 0, y: 4, w: 8, h: 4 }
+  const result = geometry.resolvePlacement(rect, 'active', layout)
+  assert.deepEqual(result.map(w => [w.id, w.y]), [['active', 4], ['a', 8], ['b', 8], ['c', 12], ['side', 4], ['hidden', 4]])
+  assertNoOverlap(result)
+  assert.deepEqual(layout, before)
+  assert.deepEqual(geometry.resolvePlacement(rect, 'active', layout), result)
+  const reversed = geometry.resolvePlacement(rect, 'active', { ...layout, widgets: [...layout.widgets].reverse() })
+  assert.deepEqual([...reversed].sort((a, b) => a.id.localeCompare(b.id)), [...result].sort((a, b) => a.id.localeCompare(b.id)))
+})
+
+test('缩放也能推开组件，紧贴不移动；隐藏组件不参与避让', () => {
+  const layout = clone(DEFAULT_LAYOUT)
+  const poetry = layout.widgets.find(w => w.id === 'poetry')
+  const unchanged = geometry.resolvePlacement(poetry, 'poetry', layout)
+  assert.deepEqual(unchanged, layout.widgets)
+  const result = geometry.resolvePlacement({ ...poetry, h: 10 }, 'poetry', layout)
+  assertNoOverlap(result)
+  assert.equal(result.find(w => w.id === 'clockWeather').y, 0)
+  assert.equal(result.find(w => w.id === 'search').y, 10)
+  assert.equal(geometry.resolvePlacement({ ...poetry, w: 1 }, 'poetry', layout), null)
+  assert.equal(geometry.resolvePlacement({ ...poetry, x: 12 }, 'poetry', layout), null)
+  assert.equal(geometry.resolvePlacement({ ...poetry, y: Infinity }, 'poetry', layout), null)
+})
+
+test('连续移动和缩放后所有可见组件仍在边界内且互不重叠', () => {
+  let layout = clone(DEFAULT_LAYOUT)
+  let seed = 20261123
+  const random = max => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed % max }
+  for (let i = 0; i < 200; i++) {
+    const widget = layout.widgets[random(layout.widgets.length)]
+    const min = geometry.MIN_SIZE[widget.type]
+    const w = min.w + random(12 - min.w + 1)
+    const rect = { x: random(13 - w), y: random(30), w, h: min.h + random(8) }
+    layout = { ...layout, widgets: geometry.resolvePlacement(rect, widget.id, layout) }
+    assertNoOverlap(layout.widgets)
+    assert.ok(layout.widgets.every(w => w.x >= 0 && w.x + w.w <= 12 && w.y >= 0))
+  }
+})
+
+test('连锁避让作为一个操作撤销、重做并保存，取消还原全部坐标', async () => {
+  const { store, writes } = setup()
+  await store.loadLayout(); store.startEditing()
+  const before = clone(store.layout)
+  assert.equal(store.applyRect('poetry', { x: 2, y: 5, w: 3, h: 4 }), true)
+  const after = clone(store.layout)
+  assertNoOverlap(after.widgets)
+  assert.notDeepEqual(after.widgets.find(w => w.id === 'search'), before.widgets.find(w => w.id === 'search'))
+  assert.equal(writes.length, 0)
+  store.undo()
+  assert.deepEqual(clone(store.layout), before)
+  assert.equal(store.canUndo, false)
+  store.redo()
+  assert.deepEqual(clone(store.layout), after)
+  store.cancelEditing()
+  assert.deepEqual(clone(store.layout), before)
+  store.startEditing()
+  store.applyRect('poetry', { x: 2, y: 5, w: 3, h: 4 })
+  assert.equal(await store.stopEditing(), true)
+  assert.deepEqual(writes[0], after)
 })
 
 test('滑块一轮交互只生成一次撤销，重做分支正确截断', async () => {

@@ -25,6 +25,30 @@ export function canPlace(rect: Rect, id: string, layout: LayoutConfig) {
     rect.x + rect.w <= layout.gridCols &&
     !layout.widgets.some(widget => widget.visible && widget.id !== id && overlaps(rect, widget))
 }
+// 当前组件固定在目标位置，其余组件按原来的行列顺序向下避让。
+// 每次都从原布局计算，避免指针来回移动时把组件越推越远。
+export function resolvePlacement(rect: Rect, id: string, layout: LayoutConfig): Widget[] | null {
+  const active = layout.widgets.find(widget => widget.id === id)
+  if (!active || ![rect.x, rect.y, rect.w, rect.h].every(Number.isSafeInteger) ||
+    rect.x < 0 || rect.y < 0 || rect.w < MIN_SIZE[active.type].w ||
+    rect.h < MIN_SIZE[active.type].h || rect.x + rect.w > layout.gridCols) return null
+  const widgets = layout.widgets.map(widget => ({ ...widget }))
+  const moved = widgets.find(widget => widget.id === id)!
+  Object.assign(moved, { x: rect.x, y: rect.y, w: rect.w, h: rect.h })
+  if (!moved.visible || ['x', 'y', 'w', 'h'].every(key => active[key as keyof Rect] === rect[key as keyof Rect])) return widgets
+  const placed: Widget[] = [moved]
+  const others = widgets.filter(widget => widget.visible && widget.id !== id)
+    .sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id))
+  for (const widget of others) {
+    let blockers = placed.filter(other => overlaps(widget, other))
+    while (blockers.length) {
+      widget.y = Math.max(...blockers.map(other => other.y + other.h))
+      blockers = placed.filter(other => overlaps(widget, other))
+    }
+    placed.push(widget)
+  }
+  return widgets
+}
 export function gridMetrics(contentWidth: number, layout: LayoutConfig) {
   const column = Math.max(1, (contentWidth - (layout.gridCols - 1) * layout.gap) / layout.gridCols)
   return { column, columnStep: column + layout.gap, rowStep: layout.gridRowHeight + layout.gap }

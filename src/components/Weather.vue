@@ -1,5 +1,6 @@
 <template>
   <div ref="element" class="weather-widget" :class="{ compact: width < 180 }">
+    <WeatherScene :code="weather?.weatherCode" />
     <div v-if="loading" class="weather-loading" role="status"><div class="spinner"></div><span>更新天气中</span></div>
     <button v-else-if="weather" class="weather-content" :aria-label="shortLocationName + '，' + weatherInfo.description + '，' + weather.temperature + '摄氏度。点击设置位置'" @click="showSettings = true">
       <span class="weather-city"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M15.5 8c0 4-5.5 8.5-5.5 8.5S4.5 12 4.5 8a5.5 5.5 0 1 1 11 0Z" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="8" r="1.7" stroke="currentColor" stroke-width="1.4"/></svg><span :title="fullLocationName">{{ shortLocationName }}</span><span class="city-edit" aria-hidden="true">↗</span></span>
@@ -71,6 +72,7 @@
 import { ref, computed, onMounted } from 'vue'
 import ModalDialog from './ModalDialog.vue'
 import WeatherGlyph from './WeatherGlyph.vue'
+import WeatherScene from './WeatherScene.vue'
 import { useElementSize } from '@/composables/useElementSize'
 import { getCurrentLocation, searchLocation, getWeatherByLocation, getWeatherInfo } from '@/api/weather'
 import type { LocationData, WeatherData } from '@/types'
@@ -190,7 +192,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.weather-widget { min-width: 0; width: 100%; color: var(--clock-ink, var(--text-primary)); }
+.weather-widget { position: relative; isolation: isolate; min-width: 0; width: 100%; padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; color: var(--clock-ink, var(--text-primary)); }
 .weather-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 0; color: var(--clock-muted, var(--text-secondary)); font-size: 11px; }
 .spinner { width: 18px; height: 18px; border: 2px solid var(--clock-muted, var(--border-color)); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -218,6 +220,7 @@ onMounted(async () => {
 .empty-weather-title { font-size: 13px; font-weight: 500; }
 .empty-weather-hint { font-size: 10px; line-height: 1.7; color: var(--clock-muted, var(--text-secondary)); }
 .compact .weather-icon { width: 40px; height: 40px; }
+.compact.weather-widget { padding: 10px; }
 .compact .temperature { font-size: 29px; }
 .compact .weather-details { display: none; }
 .compact .forecast-compact { gap: 5px; }

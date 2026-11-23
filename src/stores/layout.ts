@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import type { LayoutConfig } from '@/types'
 import { storage } from '@/utils/storage'
 import { DEFAULT_LAYOUT } from '@/utils/layoutDefaults'
-import { normalizeLayout, normalizeOpacity, canPlace, clamp, MIN_SIZE } from '@/utils/layoutGeometry'
+import { normalizeLayout, normalizeOpacity, canPlace, clamp, resolvePlacement } from '@/utils/layoutGeometry'
 import type { Rect } from '@/utils/layoutGeometry'
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value))
@@ -91,15 +91,10 @@ export const useLayoutStore = defineStore('layout', () => {
     past.value = []; future.value = []; saveError.value = ''; feedback.value = ''
   }
   function applyRect(id: string, rect: Rect) {
-    const widget = layout.value.widgets.find(item => item.id === id)
-    if (!draft.value || isSaving.value || !widget || ![rect.x, rect.y, rect.w, rect.h].every(Number.isInteger)) return false
-    const min = MIN_SIZE[widget.type]
-    if (rect.w < min.w || rect.h < min.h) return false
-    if (!canPlace(rect, id, layout.value)) { feedback.value = '此位置与其他组件重叠，请选择空位'; return false }
-    change(target => {
-      const widget = target.widgets.find(item => item.id === id)
-      if (widget) Object.assign(widget, { x: rect.x, y: rect.y, w: rect.w, h: rect.h })
-    })
+    if (!draft.value || isSaving.value) return false
+    const widgets = resolvePlacement(rect, id, layout.value)
+    if (!widgets) { feedback.value = '此位置超出网格边界或小于组件最小尺寸'; return false }
+    change(target => { target.widgets = widgets })
     feedback.value = ''
     return true
   }

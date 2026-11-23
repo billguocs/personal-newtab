@@ -2,12 +2,12 @@ import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { Widget } from '@/types'
 import { useLayoutStore } from '@/stores/layout'
-import { gridMetrics, moveRect, resizeRect, canPlace } from '@/utils/layoutGeometry'
+import { gridMetrics, moveRect, resizeRect, resolvePlacement } from '@/utils/layoutGeometry'
 import type { Rect, ResizeDirection } from '@/utils/layoutGeometry'
 
 export function useWidgetInteraction(container: Ref<HTMLElement | undefined>) {
   const store = useLayoutStore()
-  const preview = ref<{ id: string; rect: Rect; valid: boolean } | null>(null)
+  const preview = ref<{ id: string; rect: Rect; valid: boolean; widgets: Widget[] } | null>(null)
   let gesture: {
     widget: Widget; direction?: ResizeDirection; x: number; y: number;
     pointerId: number; handle: HTMLElement; columnStep: number; rowStep: number
@@ -27,7 +27,7 @@ export function useWidgetInteraction(container: Ref<HTMLElement | undefined>) {
     gesture = { widget: { ...widget }, direction, x: event.clientX - bounds.left,
       y: event.clientY - bounds.top, pointerId: event.pointerId, handle, ...metrics }
     lastPointer = event
-    preview.value = { id: widget.id, rect: { ...widget }, valid: true }
+    preview.value = { id: widget.id, rect: { ...widget }, valid: true, widgets: store.layout.widgets }
     store.interactionActive = true
     handle.setPointerCapture(event.pointerId)
   }
@@ -40,7 +40,8 @@ export function useWidgetInteraction(container: Ref<HTMLElement | undefined>) {
     const rect = gesture.direction
       ? resizeRect(gesture.widget, gesture.direction, dx, dy, store.layout.gridCols)
       : moveRect(gesture.widget, dx, dy, store.layout.gridCols)
-    preview.value = { id: gesture.widget.id, rect, valid: canPlace(rect, gesture.widget.id, store.layout) }
+    const widgets = resolvePlacement(rect, gesture.widget.id, store.layout)
+    preview.value = { id: gesture.widget.id, rect, valid: widgets !== null, widgets: widgets ?? store.layout.widgets }
   }
   function cancel() {
     const previous = gesture

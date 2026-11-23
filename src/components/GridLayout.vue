@@ -1,14 +1,14 @@
 <template>
   <div class="layout-viewport" :class="{ 'is-editing': store.isEditing }">
     <div ref="container" class="grid-layout" :class="{ 'editing-grid': store.isEditing }" :style="gridStyle">
-      <WidgetFrame v-for="widget in store.visibleWidgets" :key="widget.id" :widget="widget"
+      <WidgetFrame v-for="widget in displayedWidgets" :key="widget.id" :widget="widget"
         :editing="store.isEditing" :selected="store.selectedId === widget.id" :moving="preview?.id === widget.id"
         :disabled="store.isSaving" :style="itemStyle(widget)" @select="store.selectedId = widget.id"
         @start="(event, direction) => start(event, widget, direction)" @keyboard="keyboard($event, widget)">
         <component :is="components[widget.type]" />
       </WidgetFrame>
       <div v-if="preview" class="placement-preview" :class="{ invalid: !preview.valid }" :style="gridRect(preview.rect, store.layout)" aria-hidden="true">
-        <span>{{ preview.valid ? '松开确认位置' : '位置重叠，松开将还原' }}</span>
+        <span>{{ preview.valid ? (displacedCount ? `松开确认，${displacedCount} 个组件自动让位` : '松开确认位置') : '位置无效，松开将还原' }}</span>
       </div>
     </div>
   </div>
@@ -34,12 +34,17 @@ const components = {
 const store = useLayoutStore()
 const container = ref<HTMLElement>()
 const { preview, start, keyboard } = useWidgetInteraction(container)
+const displayedWidgets = computed(() => (preview.value?.widgets ?? store.layout.widgets).filter(widget => widget.visible))
+const displacedCount = computed(() => displayedWidgets.value.filter(widget => {
+  const original = store.layout.widgets.find(item => item.id === widget.id)
+  return widget.id !== preview.value?.id && original && (widget.x !== original.x || widget.y !== original.y)
+}).length)
 const gridStyle = computed(() => ({
   gridTemplateColumns: 'repeat(' + store.layout.gridCols + ', minmax(0, 1fr))',
   gridAutoRows: store.layout.gridRowHeight + 'px', gap: store.layout.gap + 'px',
   '--column-step': 'calc((100% + ' + store.layout.gap + 'px) / ' + store.layout.gridCols + ')',
   '--row-step': (store.layout.gridRowHeight + store.layout.gap) + 'px',
-  minHeight: store.isEditing ? (Math.max(8, ...store.visibleWidgets.map(w => w.y + w.h), preview.value ? preview.value.rect.y + preview.value.rect.h : 0) + 2) * (store.layout.gridRowHeight + store.layout.gap) + 'px' : undefined
+  minHeight: store.isEditing ? (Math.max(8, ...displayedWidgets.value.map(w => w.y + w.h), preview.value ? preview.value.rect.y + preview.value.rect.h : 0) + 2) * (store.layout.gridRowHeight + store.layout.gap) + 'px' : undefined
 }) as CSSProperties)
 function itemStyle(widget: Widget): CSSProperties {
   return { ...gridRect(widget, store.layout), '--widget-opacity': store.getWidgetOpacity(widget.id), '--widget-blur': (store.layout.backgroundBlur ?? 24) + 'px' } as CSSProperties
