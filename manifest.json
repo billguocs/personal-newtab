@@ -13,7 +13,8 @@
     "https://*.bing.com/*",
     "https://api.github.com/*",
     "https://*.zhihu.com/*",
-    "https://*.v2ex.com/*"
+    "https://*.v2ex.com/*",
+    "https://*.xueqiu.com/*"
   ],
   "chrome_url_overrides": {
     "newtab": "src/newtab/index.html"

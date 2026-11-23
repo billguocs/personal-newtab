@@ -6,7 +6,7 @@
         {{ "V2EX热议" }}
       </h3>
       <button 
-        class="refresh-btn"
+        class="refresh-btn" aria-label="刷新热榜" title="刷新热榜"
         @click="refresh"
         :disabled="hotlistStore.loading.v2ex"
       >

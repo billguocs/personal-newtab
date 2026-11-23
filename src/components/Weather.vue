@@ -4,7 +4,7 @@
       <div class="spinner"></div>
     </div>
     
-    <div v-else-if="weather" class="weather-content" @click="showSettings = true">
+    <div v-else-if="weather" class="weather-content" role="button" tabindex="0" aria-label="设置天气位置" @keydown.enter="showSettings = true" @keydown.space.prevent="showSettings = true" @click="showSettings = true">
       <div class="weather-main">
         <span class="weather-icon">{{ weatherIcon }}</span>
         <div class="weather-info">
@@ -23,14 +23,14 @@
       </div>
     </div>
     
-    <div v-else class="weather-error" @click="showSettings = true">
+    <div v-else class="weather-error" role="button" tabindex="0" @keydown.enter="showSettings = true" @keydown.space.prevent="showSettings = true" @click="showSettings = true">
       <span class="icon">📍</span>
       <span>点击设置位置</span>
     </div>
 
     <!-- 设置面板 -->
-    <div v-if="showSettings" class="settings-overlay" @click="showSettings = false"></div>
-    <div v-if="showSettings" class="weather-settings">
+    <ModalDialog v-if="showSettings" title="天气设置" @close="showSettings = false">
+    <div class="weather-settings">
       <div class="settings-header">
         <h3>天气设置</h3>
         <button class="close-btn" @click="showSettings = false">✕</button>
@@ -75,11 +75,13 @@
         </div>
       </div>
     </div>
+    </ModalDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import ModalDialog from './ModalDialog.vue'
 import { getCurrentLocation, searchLocation, getWeatherByLocation, getWeatherInfo } from '@/api/weather'
 import type { LocationData, WeatherData } from '@/types'
 import { storage } from '@/utils/storage'
@@ -289,7 +291,7 @@ onMounted(async () => {
 }
 
 .weather-settings {
-  @apply fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-6 rounded-2xl w-80 z-50;
+  @apply p-6;
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);

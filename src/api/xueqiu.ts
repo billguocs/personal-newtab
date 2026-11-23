@@ -1,12 +1,12 @@
 import type { XueqiuHotStock, XueqiuStockRealtime, XueqiuMarket } from '@/types'
 import { storage } from '@/utils/storage'
-import { fetchEastMoneyHotRank } from './eastmoney'
 
-const COOKIE_KEY = 'xueqiuCookie'
-const HOT_CACHE_PREFIX = 'xueqiuHot_'
+const HOT_CACHE_PREFIX = 'xueqiuHot_v2_'
 const QUOTE_CACHE_KEY = 'xueqiuQuotes'
 const HOT_API = 'https://stock.xueqiu.com/v5/stock/hot_stock/list.json'
 const QUOTE_API = 'https://stock.xueqiu.com/v5/stock/batch/quote.json'
+// 访问首页会让雪球下发 u / xq_a_token 等 Cookie，后续请求自动携带
+const HOME_URL = 'https://www.xueqiu.com/'
 
 // 雪球市场类型到 API type 参数的映射
 const XUEQIU_MARKET_TYPE: Record<XueqiuMarket, 11 | 12 | 13> = {
@@ -21,45 +21,68 @@ const MARKET_LABEL: Record<XueqiuMarket, string> = {
   us: '美股'
 }
 
-export interface XueqiuCookie {
-  u: string
-  xq_a_token: string
-}
-
 export function getMarketLabel(market: XueqiuMarket): string {
   return MARKET_LABEL[market]
 }
 
-// ----- Cookie 管理 -----
+// ----- 会话（Cookie）管理 -----
+// 浏览器的 fetch 不允许手动设置 Cookie 请求头，因此不再让用户配置 token，
+// 而是先访问雪球首页，让浏览器自动保存 Cookie，再用 credentials: 'include' 请求接口。
 
-export async function getXueqiuCookie(): Promise<XueqiuCookie | null> {
+let sessionPromise: Promise<boolean> | null = null
+let hasSession = false
+
+async function bootstrapSession(): Promise<boolean> {
   try {
-    const result = await chrome.storage.local.get(COOKIE_KEY)
-    return result[COOKIE_KEY] || null
-  } catch {
-    return null
+    const response = await fetch(HOME_URL, {
+      credentials: 'include',
+      headers: {
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    })
+    return response.ok
+  } catch (error) {
+    console.error('[雪球] 建立会话失败:', error)
+    return false
   }
 }
 
-export async function setXueqiuCookie(cookie: XueqiuCookie): Promise<void> {
-  await chrome.storage.local.set({ [COOKIE_KEY]: cookie })
+function ensureSession(force = false): Promise<boolean> {
+  if (!force) {
+    if (sessionPromise) return sessionPromise
+    if (hasSession) return Promise.resolve(true)
+  }
+  const promise = bootstrapSession().then((ok) => {
+    hasSession = ok
+    if (!ok) sessionPromise = null
+    return ok
+  })
+  sessionPromise = promise
+  return promise
 }
 
-// ----- 雪球请求（需要 Cookie） -----
+function isAuthError(response: Response): boolean {
+  return response.status === 400 || response.status === 401 || response.status === 403
+}
 
-async function requestWithCookie(url: string): Promise<Response | null> {
-  const cookie = await getXueqiuCookie()
-  if (!cookie) return null
-
+async function fetchXueqiu(url: string): Promise<Response | null> {
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://xueqiu.com/',
-        'Cookie': `u=${cookie.u}; xq_a_token=${cookie.xq_a_token}`,
-        'Accept': 'application/json, text/plain, */*'
-      }
-    })
+    const request = () =>
+      fetch(url, {
+        credentials: 'include',
+        headers: { Accept: 'application/json, text/plain, */*' }
+      })
+
+    let response = await request()
+
+    // 没有 Cookie 或 Cookie 失效时，雪球会返回 400/401/403。
+    // 重新访问首页建立会话后重试一次。
+    if (isAuthError(response)) {
+      console.log('[雪球] 会话失效，重新获取 Cookie 后重试')
+      const ok = await ensureSession(true)
+      if (!ok) return null
+      response = await request()
+    }
 
     if (!response.ok) {
       console.error(`[雪球] HTTP error! status: ${response.status}`)
@@ -73,11 +96,11 @@ async function requestWithCookie(url: string): Promise<Response | null> {
   }
 }
 
-// ----- 雪球热榜（需要 Cookie，支持沪深/港股/美股） -----
+// ----- 雪球热榜（沪深/港股/美股） -----
 
 async function fetchXueqiuHotStocks(type: 11 | 12 | 13): Promise<XueqiuHotStock[]> {
   const url = `${HOT_API}?type=${type}&size=30`
-  const response = await requestWithCookie(url)
+  const response = await fetchXueqiu(url)
   if (!response) return []
 
   try {
@@ -110,43 +133,6 @@ async function fetchXueqiuHotStocks(type: 11 | 12 | 13): Promise<XueqiuHotStock[
   }
 }
 
-// ----- 沪深热榜（优先雪球，无 Cookie 自动降级到东方财富） -----
-
-export async function getHsHotStocks(force = false): Promise<XueqiuHotStock[]> {
-  const cacheKey = `${HOT_CACHE_PREFIX}hs`
-
-  if (!force) {
-    const cached = await storage.getCachedData<XueqiuHotStock[]>(cacheKey)
-    if (cached) {
-      console.log('[热榜] 沪深 使用缓存数据')
-      return cached
-    }
-  }
-
-  console.log('[热榜] 沪深 从网络获取')
-
-  // 优先用雪球
-  const cookie = await getXueqiuCookie()
-  if (cookie?.u && cookie?.xq_a_token) {
-    const items = await fetchXueqiuHotStocks(12)
-    if (items.length > 0) {
-      await storage.setCachedData(cacheKey, items)
-      console.log('[热榜] 沪深 雪球数据已缓存')
-      return items
-    }
-  }
-
-  // 无 Cookie 或雪球失败，降级到东方财富
-  const eastmoneyItems = await fetchEastMoneyHotRank(50)
-  if (eastmoneyItems.length > 0) {
-    await storage.setCachedData(cacheKey, eastmoneyItems)
-    console.log('[热榜] 沪深 东方财富数据已缓存')
-  }
-  return eastmoneyItems
-}
-
-// ----- 港股/美股热榜（仅雪球，需要 Cookie） -----
-
 function getXueqiuMarketType(market: XueqiuMarket): 11 | 12 | 13 {
   return XUEQIU_MARKET_TYPE[market]
 }
@@ -173,41 +159,35 @@ export async function getXueqiuHotStocks(market: XueqiuMarket, force = false): P
 }
 
 export async function fetchAllXueqiuHotStocks(force = false): Promise<Record<XueqiuMarket, XueqiuHotStock[]>> {
-  // 沪深走降级策略，港股/美股仅雪球
-  const cookie = await getXueqiuCookie()
-  const hasCookie = !!(cookie?.u && cookie?.xq_a_token)
-
-  if (hasCookie) {
-    const [hs, hk, us] = await Promise.all([
-      getHsHotStocks(force),
-      getXueqiuHotStocks('hk', force),
-      getXueqiuHotStocks('us', force)
-    ])
-    return { hs, hk, us }
-  } else {
-    const hs = await getHsHotStocks(force)
-    return { hs, hk: [], us: [] }
-  }
+  const [hs, hk, us] = await Promise.all([
+    getXueqiuHotStocks('hs', force),
+    getXueqiuHotStocks('hk', force),
+    getXueqiuHotStocks('us', force)
+  ])
+  return { hs, hk, us }
 }
 
-// ----- 批量行情（需要 Cookie） -----
+// ----- 批量行情（自选股） -----
 
 export async function fetchRealtimeQuotes(symbols: string[]): Promise<XueqiuStockRealtime[]> {
   if (symbols.length === 0) return []
 
   const symbolStr = symbols.join(',')
   const url = `${QUOTE_API}?symbol=${encodeURIComponent(symbolStr)}`
-  const response = await requestWithCookie(url)
+  const response = await fetchXueqiu(url)
   if (!response) return []
 
   try {
     const data = await response.json()
-    if (data.error_code !== 0 || !data.data?.items) {
+    if (data.error_code !== 0 || !Array.isArray(data.data?.items)) {
       console.error('[雪球] 行情接口返回异常:', data)
       return []
     }
 
-    return data.data.items.map((item: any) => ({
+    return data.data.items
+      .map((item: any) => item?.quote)
+      .filter((quote: any) => quote && typeof quote.symbol === 'string')
+      .map((item: any) => ({
       symbol: item.symbol,
       name: item.name,
       current: item.current,
@@ -252,15 +232,34 @@ export async function getRealtimeQuotes(symbols: string[], force = false): Promi
 
 const WATCHLIST_KEY = 'xueqiuWatchlist'
 
+// 存储数据不受 TypeScript 约束；兼容旧版写入的数字键对象。
+function normalizeWatchlist(value: unknown): string[] {
+  let entries: unknown[] = []
+  if (Array.isArray(value)) {
+    entries = value
+  } else if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    entries = Object.keys(record)
+      .filter(key => /^(0|[1-9]\d*)$/.test(key))
+      .sort((a, b) => Number(a) - Number(b))
+      .map(key => record[key])
+  }
+  return [...new Set(entries
+    .filter((symbol): symbol is string => typeof symbol === 'string')
+    .map(symbol => symbol.trim())
+    .filter(Boolean))]
+}
+
 export async function getWatchlist(): Promise<string[]> {
   try {
     const result = await chrome.storage.local.get(WATCHLIST_KEY)
-    return result[WATCHLIST_KEY] || []
+    return normalizeWatchlist(result[WATCHLIST_KEY])
   } catch {
     return []
   }
 }
 
 export async function saveWatchlist(symbols: string[]): Promise<void> {
-  await chrome.storage.local.set({ [WATCHLIST_KEY]: symbols })
+  // 生成普通数组，避免直接把 Vue 响应式 Proxy 传给 Chrome Storage。
+  await chrome.storage.local.set({ [WATCHLIST_KEY]: normalizeWatchlist(symbols) })
 }

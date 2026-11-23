@@ -41,7 +41,10 @@ onUnmounted(() => {
 <style scoped>
 .clock-weather-widget {
   @apply flex items-center justify-between px-4 py-2;
-  width: 60%;
+  width: 100%;
+  height: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
   margin: 0 auto;
   max-width: 800px;
   gap: 16px;
@@ -54,17 +57,20 @@ onUnmounted(() => {
 
 .time {
   @apply text-5xl font-bold tracking-tight;
-  color: #ffffff;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 0, 0, 0.4);
+  color: var(--text-primary);
+  text-shadow: none;
 }
 
 .date {
   @apply text-base mt-1;
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  color: var(--text-secondary);
+  text-shadow: none;
 }
 
 .weather-section {
   @apply flex-shrink-0;
 }
+.clock-section { min-width: 0; flex-shrink: 1; }
+.weather-section { min-width: 0; flex-shrink: 1; }
+@media (max-width: 520px) { .clock-weather-widget { flex-direction: column; padding: 24px 16px; } .clock-section { text-align: center; } }
 </style>

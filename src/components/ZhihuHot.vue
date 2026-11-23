@@ -6,7 +6,7 @@
         {{ "知乎热榜" }}
       </h3>
       <button 
-        class="refresh-btn"
+        class="refresh-btn" aria-label="刷新热榜" title="刷新热榜"
         @click="refresh"
         :disabled="hotlistStore.loading.zhihu"
       >
@@ -47,7 +47,7 @@
           class="hot-item"
         >
           <span :class="['rank', { top: index < 3 }]">{{ index + 1 }}</span>
-          <span class="title">{{ item.title }}</span>
+          <span class="title" :title="item.title">{{ item.title }}</span>
           <span class="heat">{{ item.hot }}</span>
         </a>
       </div>

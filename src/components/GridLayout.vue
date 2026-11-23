@@ -2,6 +2,7 @@
   <div
     ref="gridContainer"
     class="grid-layout"
+    :class="{ 'editing-grid': layoutStore.isEditing }"
     :style="gridStyle"
   >
     <!-- 调试网格线 -->
@@ -139,6 +140,7 @@ const XueqiuHot = defineAsyncComponent(() => import('./XueqiuHot.vue'))
 const layoutStore = useLayoutStore()
 const gridContainer = ref<HTMLElement>()
 
+let resizeObserver: ResizeObserver | null = null
 let isDragging = false
 let isResizing = false
 let draggingId = ref<string | null>(null)
@@ -175,7 +177,7 @@ const totalRows = computed(() => {
 
 const gridStyle = computed(() => ({
   display: 'grid',
-  gridTemplateColumns: `repeat(${layoutStore.layout.gridCols}, 1fr)`,
+  gridTemplateColumns: `repeat(${layoutStore.layout.gridCols}, minmax(0, 1fr))`,
   gap: `16px`,
   padding: `24px 32px`,
   '--widget-opacity': widgetOpacity.value
@@ -202,7 +204,7 @@ function getItemStyle(widget: Widget) {
   return {
     gridColumn: `${widget.x + 1} / span ${widget.w}`,
     gridRow: `${widget.y + 1} / span ${widget.h}`,
-    minHeight: `${widget.h * rowHeight}px`,
+    minHeight: `${widget.h * rowHeight + (widget.h - 1) * layoutStore.layout.gap}px`,
     maxHeight: `${widget.h * rowHeight}px`,
     '--widget-opacity': opacity
   } as any
@@ -247,7 +249,9 @@ function onMouseMove(e: MouseEvent) {
     const dx = e.clientX - startX
     const dy = e.clientY - startY
     
-    const colWidth = gridContainer.value.offsetWidth / layoutStore.layout.gridCols
+    const style = getComputedStyle(gridContainer.value)
+    const contentWidth = gridContainer.value.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    const colWidth = (contentWidth + layoutStore.layout.gap) / layoutStore.layout.gridCols
     const rowHeight = layoutStore.layout.gridRowHeight + layoutStore.layout.gap
     
     const newCol = Math.max(0, Math.min(layoutStore.layout.gridCols - dragWidget.w, startCol + Math.round(dx / colWidth)))
@@ -262,7 +266,9 @@ function onMouseMove(e: MouseEvent) {
     const dx = e.clientX - startX
     const dy = e.clientY - startY
 
-    const colWidth = gridContainer.value.offsetWidth / layoutStore.layout.gridCols
+    const style = getComputedStyle(gridContainer.value)
+    const contentWidth = gridContainer.value.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    const colWidth = (contentWidth + layoutStore.layout.gap) / layoutStore.layout.gridCols
     const rowHeight = layoutStore.layout.gridRowHeight + layoutStore.layout.gap
 
     const dir = resizeDirection.value
@@ -329,7 +335,7 @@ onMounted(() => {
   if (gridContainer.value) {
     layoutStore.setContainerWidth(gridContainer.value.offsetWidth)
     
-    const resizeObserver = new ResizeObserver((entries) => {
+    resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         layoutStore.setContainerWidth(entry.contentRect.width)
       }
@@ -358,7 +364,8 @@ onUnmounted(() => {
 
 .grid-item {
   @apply relative;
-  transition: all 0.2s ease;
+  min-width: 0;
+  transition: box-shadow 0.2s ease;
   background: transparent;
   border-radius: 16px;
 }
@@ -366,7 +373,7 @@ onUnmounted(() => {
 .grid-item.editing {
   @apply ring-2 ring-blue-400 ring-opacity-70;
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-  animation: editingPulse 2s infinite;
+  z-index: 1;
 }
 
 @keyframes editingPulse {
@@ -389,9 +396,11 @@ onUnmounted(() => {
 }
 
 .widget-container {
-  background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  opacity: var(--widget-opacity, 0.85);
+  isolation: isolate;
+  backdrop-filter: blur(24px) saturate(0.85);
+  background: transparent;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.07);
   position: relative;
 }
 
@@ -596,5 +605,25 @@ onUnmounted(() => {
   background: rgba(59, 130, 246, 0.1);
   padding: 2px 6px;
   border-radius: 4px;
+}
+/* 透明度只作用于底色，文字和控件始终清晰。 */
+.widget-container::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; z-index: -1;
+  background: var(--glass-bg); opacity: var(--widget-opacity, 0.85);
+
+}
+.widget-container:hover { transform: none; }
+.widget-wrapper { border-radius: 20px; }
+.grid-item.editing .drag-handle, .grid-item.editing .opacity-btn { opacity: 1; }
+.grid-item:focus-within { z-index: 2; }
+@media (max-width: 900px) {
+  .grid-layout:not(.editing-grid) { display: flex !important; flex-direction: column; padding: 20px 16px 100px; }
+  .grid-layout:not(.editing-grid) .grid-item { min-height: 0 !important; max-height: none !important; }
+  .grid-layout:not(.editing-grid) .grid-item[data-type="github"],
+  .grid-layout:not(.editing-grid) .grid-item[data-type="zhihu"],
+  .grid-layout:not(.editing-grid) .grid-item[data-type="v2ex"],
+  .grid-layout:not(.editing-grid) .grid-item[data-type="xueqiu"] { height: 420px; }
+  .grid-layout:not(.editing-grid) .grid-item[data-type="poetry"] { height: 180px; }
+  .grid-layout:not(.editing-grid) .grid-item[data-type="clockWeather"] { min-height: 200px !important; }
 }
 </style>

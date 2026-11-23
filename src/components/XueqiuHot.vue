@@ -13,18 +13,7 @@
       </h3>
       <div class="widget-actions">
         <button
-          v-if="layoutStore.isEditing"
-          class="config-btn"
-          @click.stop="showConfig = true"
-          title="配置 Cookie"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-          </svg>
-        </button>
-        <button
-          class="refresh-btn"
+          class="refresh-btn" aria-label="刷新热榜" title="刷新热榜"
           @click="refresh"
           :disabled="hotlistStore.loading.xueqiu"
         >
@@ -59,11 +48,7 @@
       </button>
     </div>
 
-    <!-- 未配置 Cookie 提示 -->
-    <div v-if="!hasCookie" class="cookie-warning">
-      ⚠ 请点击右上角 ⚙ 配置雪球 Cookie 以获取热榜数据
-    </div>
-
+    <!-- 内容区域 -->
     <div class="widget-content">
       <!-- Loading 状态 -->
       <div v-if="hotlistStore.loading.xueqiu && currentStocks.length === 0" class="loading">
@@ -73,7 +58,7 @@
       <!-- 错误状态 -->
       <div v-else-if="errorMessage" class="error">
         <p>{{ errorMessage }}</p>
-        <button v-if="hasCookie" @click="refresh" class="retry-btn">刷新</button>
+        <button @click="refresh" class="retry-btn">刷新</button>
       </div>
 
       <!-- 数据列表 -->
@@ -117,8 +102,8 @@
           >{{ stock.name }}</a>
           <span class="stock-symbol">{{ stock.symbol }}</span>
           <span class="stock-price">{{ formatPrice(stock.current) }}</span>
-          <span :class="['stock-change', stock.percent >= 0 ? 'rise' : 'fall']">
-            {{ stock.percent >= 0 ? '+' : '' }}{{ stock.percent.toFixed(2) }}%
+          <span :class="['stock-change', isRise(stock.percent) ? 'rise' : 'fall']">
+            {{ formatPercent(stock.percent) }}
           </span>
           <button
             class="follow-btn"
@@ -146,77 +131,35 @@
           关注你感兴趣的股票
         </div>
         <div
-          v-for="quote in watchlistQuotes"
+          v-for="quote in displayedWatchlistQuotes"
           :key="quote.symbol"
           class="watchlist-item"
         >
           <span class="wl-name">{{ quote.name }}</span>
+          <button class="follow-btn followed" @click="toggleFollow(quote.symbol)" title="取消关注">★</button>
           <span class="wl-price">{{ formatPrice(quote.current) }}</span>
-          <span :class="['wl-change', quote.percent >= 0 ? 'rise' : 'fall']">
-            {{ quote.percent >= 0 ? '+' : '' }}{{ quote.percent.toFixed(2) }}%
+          <span :class="['wl-change', isRise(quote.percent) ? 'rise' : 'fall']">
+            {{ formatPercent(quote.percent) }}
           </span>
         </div>
+        <div v-if="watchlistError" class="watchlist-empty" role="status">{{ watchlistError }}</div>
         <div v-if="watchlistLoading" class="watchlist-loading">
           <div class="mini-spinner"></div>
         </div>
       </div>
     </div>
-
-    <!-- Cookie 配置弹窗 -->
-    <teleport to="body">
-      <div v-if="showConfig" class="config-overlay" @click.self="showConfig = false">
-        <div class="config-dialog" @click.stop>
-          <h4 class="config-title">配置雪球 Cookie</h4>
-          <p class="config-desc">
-            从浏览器开发者工具 (F12) → Network → 任意请求头中获取
-            <code>u</code> 和 <code>xq_a_token</code> 的值
-          </p>
-          <div class="config-field">
-            <label>u</label>
-            <input
-              v-model="cookieForm.u"
-              type="text"
-              placeholder="输入 u 的值"
-              class="config-input"
-            />
-          </div>
-          <div class="config-field">
-            <label>xq_a_token</label>
-            <input
-              v-model="cookieForm.xq_a_token"
-              type="text"
-              placeholder="输入 xq_a_token 的值"
-              class="config-input"
-            />
-          </div>
-          <div class="config-actions">
-            <button
-              class="config-btn-cancel"
-              @click="showConfig = false"
-            >取消</button>
-            <button
-              class="config-btn-save"
-              @click="saveCookieConfig"
-            >保存</button>
-          </div>
-        </div>
-      </div>
-    </teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useHotListStore } from '@/stores/hotlist'
-import { useLayoutStore } from '@/stores/layout'
-import { getXueqiuCookie, setXueqiuCookie, getWatchlist, saveWatchlist, fetchRealtimeQuotes } from '@/api/xueqiu'
+import { getWatchlist, saveWatchlist, fetchRealtimeQuotes } from '@/api/xueqiu'
 import type { XueqiuMarket, XueqiuStockRealtime } from '@/types'
 
 const hotlistStore = useHotListStore()
-const layoutStore = useLayoutStore()
 const widgetRef = ref<HTMLElement>()
 const hasLoaded = ref(false)
-const hasCookie = ref(false)
 
 // Tab
 const activeTab = ref<XueqiuMarket>('hs')
@@ -228,21 +171,22 @@ const tabs = [
 
 // 当前 tab 的数据
 const currentStocks = computed(() => hotlistStore.xueqiuStocks[activeTab.value])
-const errorMessage = computed(() => {
-  if (!hasCookie.value) return ''
-  return hotlistStore.error.xueqiu
-})
+const errorMessage = computed(() => hotlistStore.error.xueqiu)
 
 // 自选股
 const watchlist = ref<string[]>([])
 const watchlistQuotes = ref<XueqiuStockRealtime[]>([])
 const showWatchlist = ref(false)
 const watchlistLoading = ref(false)
+const watchlistError = ref('')
+// 始终保留自选股行，即使部分行情缺失也可查看代码或取消关注。
+const displayedWatchlistQuotes = computed(() => watchlist.value.map(symbol =>
+  watchlistQuotes.value.find(quote => quote.symbol === symbol) || {
+    symbol, name: symbol, current: undefined, percent: undefined
+  }
+))
+let quoteRequestId = 0
 let quoteTimer: ReturnType<typeof setInterval> | null = null
-
-// Cookie 配置
-const showConfig = ref(false)
-const cookieForm = ref({ u: '', xq_a_token: '' })
 
 function handleIconError(e: Event) {
   const img = e.target as HTMLImageElement
@@ -252,18 +196,13 @@ function handleIconError(e: Event) {
 async function loadIfVisible() {
   if (!hasLoaded.value) {
     hasLoaded.value = true
-    await checkCookie()
-    if (hasCookie.value) {
-      hotlistStore.loadXueqiuHot(activeTab.value)
-    }
+    hotlistStore.loadXueqiuHot(activeTab.value)
   }
 }
 
 let observer: IntersectionObserver | null = null
 
 onMounted(async () => {
-  // 检查 Cookie 和加载自选股
-  await checkCookie()
   watchlist.value = await getWatchlist()
 
   if (widgetRef.value) {
@@ -284,22 +223,17 @@ onUnmounted(() => {
   stopQuoteRefresh()
 })
 
-async function checkCookie() {
-  const cookie = await getXueqiuCookie()
-  hasCookie.value = !!(cookie?.u && cookie?.xq_a_token)
-}
-
 async function switchTab(market: XueqiuMarket) {
   activeTab.value = market
-  if (hasCookie.value && hotlistStore.xueqiuStocks[market].length === 0) {
+  if (hotlistStore.xueqiuStocks[market].length === 0) {
     hotlistStore.loadXueqiuHot(market)
   }
 }
 
 async function refresh() {
-  // 沪深有东方财富降级（无需 Cookie），港股/美股无 Cookie 时获取会返回空
+  // Cookie 由 api 层访问雪球首页自动获取，无需用户配置
   await hotlistStore.loadXueqiuHot(activeTab.value, true)
-  if (hasCookie.value) {
+  if (watchlist.value.length > 0) {
     refreshWatchlistQuotes()
   }
 }
@@ -317,25 +251,26 @@ async function toggleFollow(symbol: string) {
   }
   await saveWatchlist(watchlist.value)
 
-  // 如果自选股展开，刷新行情
-  if (showWatchlist.value) {
-    if (watchlist.value.length > 0) {
-      refreshWatchlistQuotes()
-    } else {
-      watchlistQuotes.value = []
-      stopQuoteRefresh()
-    }
-  }
 }
 
 async function refreshWatchlistQuotes() {
-  if (watchlist.value.length === 0) return
+  const requestId = ++quoteRequestId
+  const symbols = [...watchlist.value]
+  if (symbols.length === 0) return
   watchlistLoading.value = true
-  const quotes = await fetchRealtimeQuotes(watchlist.value)
-  if (quotes.length > 0) {
-    watchlistQuotes.value = quotes
+  watchlistError.value = ''
+  try {
+    const quotes = await fetchRealtimeQuotes(symbols)
+    if (requestId !== quoteRequestId) return
+    watchlistQuotes.value = quotes.filter(quote => watchlist.value.includes(quote.symbol))
+    if (watchlistQuotes.value.length < symbols.length) {
+      watchlistError.value = '部分行情暂不可用，请稍后刷新'
+    }
+  } catch {
+    if (requestId === quoteRequestId) watchlistError.value = '行情加载失败，请稍后刷新'
+  } finally {
+    if (requestId === quoteRequestId) watchlistLoading.value = false
   }
-  watchlistLoading.value = false
 }
 
 function startQuoteRefresh() {
@@ -346,36 +281,42 @@ function startQuoteRefresh() {
 }
 
 function stopQuoteRefresh() {
+  ++quoteRequestId
+  watchlistLoading.value = false
   if (quoteTimer) {
     clearInterval(quoteTimer)
     quoteTimer = null
   }
 }
 
-// 监听自选股面板展开/收起
-watch(showWatchlist, (val: boolean) => {
-  if (val && watchlist.value.length > 0) {
+// 同时监听面板和自选股变化，覆盖展开空面板后新增第一只股票的情况。
+watch([showWatchlist, () => watchlist.value.join(',')], ([open]) => {
+  watchlistQuotes.value = watchlistQuotes.value.filter(quote => watchlist.value.includes(quote.symbol))
+  watchlistError.value = ''
+  if (open && watchlist.value.length > 0) {
     startQuoteRefresh()
   } else {
     stopQuoteRefresh()
   }
 })
 
-// Cookie 配置
-async function saveCookieConfig() {
-  if (!cookieForm.value.u || !cookieForm.value.xq_a_token) return
-  await setXueqiuCookie({
-    u: cookieForm.value.u.trim(),
-    xq_a_token: cookieForm.value.xq_a_token.trim()
-  })
-  showConfig.value = false
-  hasCookie.value = true
-  // 自动刷新数据
-  hotlistStore.loadXueqiuHot(activeTab.value, true)
+// 雪球接口对停牌/无行情标的会返回 null，这里统一做防御性格式化，
+// 避免模板渲染抛异常导致整个组件白屏。
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
 }
 
-function formatPrice(price: number): string {
-  return price.toFixed(2)
+function formatPrice(price?: number | null): string {
+  return isFiniteNumber(price) ? price.toFixed(2) : '--'
+}
+
+function formatPercent(percent?: number | null): string {
+  if (!isFiniteNumber(percent)) return '--'
+  return `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`
+}
+
+function isRise(percent?: number | null): boolean {
+  return !isFiniteNumber(percent) || percent >= 0
 }
 </script>
 
@@ -416,17 +357,6 @@ function formatPrice(price: number): string {
   @apply opacity-50 cursor-not-allowed;
 }
 
-.config-btn {
-  @apply p-2 rounded-lg transition-all duration-200;
-  color: var(--text-secondary);
-  pointer-events: auto;
-}
-
-.config-btn:hover {
-  background: var(--bg-secondary);
-  color: var(--accent-color);
-}
-
 .spinning {
   animation: spin 1s linear infinite;
 }
@@ -456,14 +386,6 @@ function formatPrice(price: number): string {
 .tab-btn.active {
   background: var(--accent-color);
   color: white;
-}
-
-/* Cookie 警告 */
-.cookie-warning {
-  @apply mx-4 mt-3 px-3 py-2 rounded-lg text-xs;
-  background: rgba(234, 179, 8, 0.15);
-  color: #b8860b;
-  border: 1px solid rgba(234, 179, 8, 0.3);
 }
 
 /* 内容区域 */
@@ -665,71 +587,5 @@ function formatPrice(price: number): string {
   @apply w-4 h-4 border-2 border-t-transparent rounded-full animate-spin;
   border-color: var(--accent-color);
   border-top-color: transparent;
-}
-
-/* 配置弹窗 */
-.config-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.config-dialog {
-  @apply p-6 rounded-2xl w-96 max-w-[90vw];
-  background: var(--bg-primary, #fff);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.config-title {
-  @apply text-lg font-semibold mb-2;
-  color: var(--text-primary);
-}
-
-.config-desc {
-  @apply text-xs mb-4 leading-relaxed;
-  color: var(--text-secondary);
-}
-
-.config-desc code {
-  @apply px-1 py-0.5 rounded;
-  background: var(--bg-secondary);
-  font-family: monospace;
-}
-
-.config-field {
-  @apply mb-3;
-}
-
-.config-field label {
-  @apply block text-sm font-medium mb-1;
-  color: var(--text-primary);
-}
-
-.config-input {
-  @apply w-full px-3 py-2 rounded-lg text-sm outline-none transition-all duration-200;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-}
-
-.config-input:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-.config-actions {
-  @apply flex justify-end gap-2 mt-4;
-}
-
-.config-btn-cancel {
-  @apply px-4 py-2 rounded-lg text-sm;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-}
-
-.config-btn-save {
-  @apply px-4 py-2 rounded-lg text-sm font-medium;
-  background: var(--accent-color);
-  color: white;
 }
 </style>

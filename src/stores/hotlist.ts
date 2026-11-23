@@ -4,7 +4,7 @@ import type { GitHubRepo, GitHubQueryOptions, ZhihuItem, V2exTopic, XueqiuHotSto
 import { getGitHubTrending } from '@/api/github'
 import { getZhihuHot } from '@/api/zhihu'
 import { getV2exHot } from '@/api/v2ex'
-import { getHsHotStocks, getXueqiuHotStocks, fetchAllXueqiuHotStocks } from '@/api/xueqiu'
+import { getXueqiuHotStocks, fetchAllXueqiuHotStocks } from '@/api/xueqiu'
 
 export const useHotListStore = defineStore('hotlist', () => {
   const githubRepos = ref<GitHubRepo[]>([])
@@ -100,15 +100,8 @@ export const useHotListStore = defineStore('hotlist', () => {
     error.value.xueqiu = ''
 
     try {
-      if (market === 'hs') {
-        // 沪深：降级策略（雪球 → 东方财富）
-        const stocks = await getHsHotStocks(force)
-        xueqiuStocks.value.hs = stocks
-      } else {
-        // 港股/美股：仅雪球
-        const stocks = await getXueqiuHotStocks(market, force)
-        xueqiuStocks.value[market] = stocks
-      }
+      const stocks = await getXueqiuHotStocks(market, force)
+      xueqiuStocks.value[market] = stocks
     } catch (e) {
       error.value.xueqiu = '获取失败，请稍后重试'
     } finally {

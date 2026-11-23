@@ -1,6 +1,6 @@
 <template>
   <div class="navigation-widget">
-    <div v-if="!isEditing" class="nav-links">
+    <div class="nav-links">
       <template v-if="navLinks.length > 0">
         <div class="nav-row">
           <a
@@ -27,7 +27,8 @@
     </div>
 
     <!-- 编辑模式 -->
-    <div v-else class="nav-editing">
+    <ModalDialog v-if="isEditing" title="自定义导航" @close="cancelEdit">
+    <div class="nav-editing">
       <div class="edit-header">
         <h3>自定义导航</h3>
         <span class="edit-hint">{{ navLinks.length }}/10</span>
@@ -38,7 +39,6 @@
           v-model="navLinks"
           :animation="150"
           handle=".nav-drag-handle"
-          @end="onNavDragEnd"
         >
           <div 
             v-for="(link, index) in navLinks" 
@@ -55,13 +55,13 @@
               v-model="link.name"
               type="text"
               placeholder="名称"
-              class="name-input"
+              class="name-input" aria-label="导航名称"
             />
             <input 
               v-model="link.url"
               type="text"
               placeholder="https://..."
-              class="url-input"
+              class="url-input" aria-label="导航网址"
             />
             <button class="delete-btn" @click="removeLink(index)">🗑️</button>
           </div>
@@ -83,14 +83,17 @@
         📚 从书签导入
       </button>
 
+      <p v-if="saveError" class="save-error" role="alert">{{ saveError }}</p>
       <div class="edit-actions">
         <button class="btn-secondary" @click="cancelEdit">取消</button>
-        <button class="btn-primary" @click="saveLinks">保存</button>
+        <button class="btn-primary" :disabled="isSaving" @click="saveLinks">{{ isSaving ? '保存中…' : '保存' }}</button>
       </div>
     </div>
 
+    </ModalDialog>
+
     <!-- 书签导入面板 -->
-    <div v-if="showBookmarkPanel" class="bookmark-panel-overlay" @click.self="showBookmarkPanel = false">
+    <ModalDialog v-if="showBookmarkPanel" title="从书签导入" @close="showBookmarkPanel = false">
       <div class="bookmark-panel">
         <div class="panel-header">
           <h3>从书签导入</h3>
@@ -135,7 +138,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </ModalDialog>
 
     <!-- 编辑按钮 -->
     <button 
@@ -151,12 +154,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import ModalDialog from './ModalDialog.vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import type { NavigationLink } from '@/types'
 import { storage } from '@/utils/storage'
 
 const navLinks = ref<NavigationLink[]>([])
 const isEditing = ref(false)
+const isSaving = ref(false)
+const saveError = ref('')
 const originalLinks = ref<NavigationLink[]>([])
 const showBookmarkPanel = ref(false)
 const bookmarkLoading = ref(false)
@@ -252,31 +258,48 @@ async function loadNavLinks() {
 
 async function saveToStorage() {
   try {
-    await storage.setNavigationLinks(navLinks.value)
+    await storage.setNavigationLinks(JSON.parse(JSON.stringify(navLinks.value)))
     console.log('Navigation: 已保存', navLinks.value.length, '个链接:', navLinks.value.map(l => l.name))
   } catch (error) {
     console.error('Navigation: 保存失败', error)
-    alert('保存导航失败，请检查权限设置')
+    throw error
   }
 }
 
 function startEdit() {
+  saveError.value = ''
   originalLinks.value = JSON.parse(JSON.stringify(navLinks.value))
   isEditing.value = true
 }
 
 function cancelEdit() {
+  if (isSaving.value) return
+  showBookmarkPanel.value = false
   navLinks.value = originalLinks.value
   isEditing.value = false
 }
 
 async function saveLinks() {
-  // 过滤掉空项
-  navLinks.value = navLinks.value.filter(link => link.name.trim() && link.url.trim())
-  console.log('Navigation: 准备保存', navLinks.value.length, '个链接')
-  await saveToStorage()
-  isEditing.value = false
-  console.log('Navigation: 编辑模式关闭')
+  if (isSaving.value) return
+  saveError.value = ''
+  const links = navLinks.value.filter(link => link.name.trim() || link.url.trim())
+  try {
+    const cleaned = links.map(link => {
+      if (/^[a-z][a-z0-9+.-]*:/i.test(link.url.trim()) && !/^https?:/i.test(link.url.trim())) throw new Error('仅支持 HTTP 或 HTTPS 网址')
+      if (!link.name.trim() || !link.url.trim()) throw new Error('请填写导航名称和网址，或删除空白项')
+      const url = new URL(/^https?:\/\//i.test(link.url.trim()) ? link.url.trim() : 'https://' + link.url.trim())
+      if (!['http:', 'https:'].includes(url.protocol)) throw new Error('请输入有效的 HTTP 或 HTTPS 网址')
+      return { ...link, name: link.name.trim(), url: url.href }
+    })
+    isSaving.value = true
+    await storage.setNavigationLinks(cleaned)
+    navLinks.value = cleaned
+    isEditing.value = false
+  } catch (error) {
+    saveError.value = error instanceof Error ? error.message : '保存失败，请重试'
+  } finally {
+    isSaving.value = false
+  }
 }
 
 function addLink() {
@@ -290,14 +313,11 @@ function addLink() {
   }
 }
 
-function onNavDragEnd() {
-  saveToStorage()
-}
 
-async function removeLink(index: number) {
+
+function removeLink(index: number) {
   navLinks.value.splice(index, 1)
-  // 删除后立即保存
-  await saveToStorage()
+
 }
 
 // 书签导入相关
@@ -367,8 +387,7 @@ async function importBookmarks() {
   const remainingSlots = 10 - navLinks.value.length
   if (remainingSlots > 0) {
     navLinks.value = [...navLinks.value, ...newLinks.slice(0, remainingSlots)]
-    // 立即保存导入的书签
-    await saveToStorage()
+
   }
   
   selectedBookmarks.value = []
@@ -394,15 +413,10 @@ onMounted(() => {
 <style scoped>
 .navigation-widget {
   @apply relative;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  padding: 12px;
-}
-
-.navigation-widget:hover {
-  background: var(--glass-bg);
-  border-color: var(--accent-color);
+  padding: 18px 44px 18px 18px;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .nav-links {
@@ -410,29 +424,22 @@ onMounted(() => {
 }
 
 .nav-row {
-  @apply flex flex-wrap justify-center;
+  @apply flex flex-wrap justify-start;
   gap: 8px;
 }
 
-/* 每行最多5个 */
+/* 紧凑等宽，按卡片可用宽度自然换行；每行都从左侧开始。 */
 .nav-item {
   @apply flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200;
-  flex: 0 0 calc(20% - 6.4px);
-  max-width: calc(20% - 6.4px);
-  min-width: 100px;
+  flex: 0 1 112px;
+  max-width: 128px;
+  min-width: 0;
   background: rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.5);
   color: var(--text-primary);
   text-decoration: none;
   box-sizing: border-box;
-}
-
-@media (max-width: 640px) {
-  .nav-item {
-    flex: 0 0 calc(33.333% - 5.33px);
-    max-width: calc(33.333% - 5.33px);
-  }
 }
 
 .nav-item:hover {
@@ -462,12 +469,13 @@ onMounted(() => {
 }
 
 .edit-toggle-btn {
-  @apply absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 transition-all duration-200;
+  @apply absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 transition-all duration-200;
   background: var(--accent-color);
   color: white;
 }
 
-.navigation-widget:hover .edit-toggle-btn {
+.navigation-widget:hover .edit-toggle-btn,
+.navigation-widget:focus-within .edit-toggle-btn {
   opacity: 1;
 }
 
@@ -477,7 +485,7 @@ onMounted(() => {
 
 /* 编辑模式 */
 .nav-editing {
-  @apply p-4 rounded-2xl;
+  @apply p-6;
   background: var(--glass-bg);
   backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
@@ -593,7 +601,7 @@ onMounted(() => {
 }
 
 .bookmark-panel {
-  @apply w-full max-w-md p-6 rounded-2xl;
+  @apply w-full p-6;
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
@@ -687,5 +695,18 @@ onMounted(() => {
 
 .footer-actions {
   @apply flex gap-2;
+}
+.save-error { color: #dc2626; font-size: 13px; margin: 8px 0; }
+.nav-edit-item + .nav-edit-item { margin-top: 10px; }
+.url-input { min-width: 0; }
+.name-input, .url-input { padding: 10px; }
+.nav-item { border-color: transparent; }
+.nav-editing { background: var(--bg-primary); border: 0; }
+.edit-toggle-btn { opacity: 0.7; }
+@media (max-width: 520px) {
+  .nav-edit-item { flex-wrap: wrap; }
+  .url-input { flex-basis: calc(100% - 40px); order: 4; margin-left: 32px; }
+  .name-input { flex: 1; width: auto; }
+  .nav-item { min-width: 0; flex-basis: calc(50% - 4px); max-width: none; }
 }
 </style>

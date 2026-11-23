@@ -4,13 +4,14 @@
 
 @layer base {
   :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f5f5f5;
-    --text-primary: #1a1a1a;
-    --text-secondary: #666666;
+    --bg-primary: #f8fafc;
+    --bg-secondary: #eef2f7;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
     --border-color: #e5e5e5;
-    --accent-color: #3b82f6;
-    --glass-bg: rgba(255, 255, 255, 0.85);
+    --accent-color: #4f6bed;
+    --glass-bg: #f8fafc;
+    --row-hover: rgba(79, 107, 237, 0.07);
     --glass-border: rgba(255, 255, 255, 0.3);
   }
 
@@ -21,7 +22,8 @@
     --text-secondary: #a0a0a0;
     --border-color: #404040;
     --accent-color: #60a5fa;
-    --glass-bg: rgba(30, 30, 30, 0.85);
+    --glass-bg: #172033;
+    --row-hover: rgba(145, 164, 255, 0.12);
     --glass-border: rgba(255, 255, 255, 0.1);
   }
 }
@@ -37,11 +39,6 @@
     @apply rounded-2xl shadow-lg transition-all duration-300;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-  }
-
-  .widget-container:hover {
-    @apply shadow-xl;
-    transform: translateY(-2px);
   }
 
   .search-input {
@@ -118,4 +115,103 @@
 
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out;
+}
+
+/* 共享卡片视觉与可访问性，保持壁纸主题配色。 */
+body { -webkit-font-smoothing: antialiased; }
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent-color); outline-offset: 3px;
+}
+button:disabled { cursor: not-allowed; opacity: 0.55; }
+.hot-list-widget { min-height: 0; overflow: hidden; border-radius: 20px; }
+.grid-layout .hot-list-widget .widget-header { padding: 14px 16px 10px; gap: 10px; flex-shrink: 0; border-bottom: 0; }
+.grid-layout .hot-list-widget .widget-title { font-size: 14px; letter-spacing: 0.01em; font-weight: 600; }
+.grid-layout .hot-list-widget .widget-content { min-height: 0; overscroll-behavior: contain; }
+.grid-layout .hot-list-widget .refresh-btn { border: 0; border-radius: 8px; background: transparent; }
+.grid-layout .hot-list-widget .refresh-btn:hover { background: var(--row-hover); }
+.grid-layout .hot-list-widget .repo-item, .grid-layout .hot-list-widget .topic-item, .grid-layout .hot-list-widget .hot-item { border-radius: 12px; }
+.grid-layout .hot-list-widget .stock-list { min-width: 460px; }
+.grid-layout .hot-list-widget .tab-btn { font-size: 12px; border-radius: 8px; }
+.grid-layout .hot-list-widget .watchlist-section { background: transparent; }
+
+/* 条目单独调节底色，悬停不会改变父卡片或兄弟条目的透明度。 */
+.grid-layout .grid-item .widget-wrapper :is(.nav-item, .repo-item, .hot-item, .topic-item, .stock-item, .watchlist-item) {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+}
+.grid-layout .nav-item::before,
+.grid-layout .repo-item::before,
+.grid-layout .hot-item::before,
+.grid-layout .topic-item::before,
+.grid-layout .stock-item::before,
+.grid-layout .watchlist-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--row-hover);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.grid-layout .nav-item:hover::before,
+.grid-layout .repo-item:hover::before,
+.grid-layout .hot-item:hover::before,
+.grid-layout .topic-item:hover::before,
+.grid-layout .stock-item:hover::before,
+.grid-layout .watchlist-item:hover::before,
+.grid-layout .nav-item:focus-visible::before,
+.grid-layout .repo-item:focus-within::before,
+.grid-layout .hot-item:focus-within::before,
+.grid-layout .topic-item:focus-within::before,
+.grid-layout .stock-item:focus-within::before,
+.grid-layout .watchlist-item:focus-within::before { opacity: 1; }
+/* 轻量列表：用排版和留白区分层级，不再为每条内容绘制胶囊。 */
+.grid-layout .hot-list-widget > .widget-content { padding: 4px 8px 12px; }
+.grid-layout .hot-list-widget :is(.hot-list, .topic-list, .repo-list) > * + * { margin-top: 4px; }
+.grid-layout .hot-list-widget :is(.hot-item, .topic-item, .repo-item) {
+  padding: 10px 8px; gap: 12px; border-radius: 8px; text-decoration: none;
+}
+.grid-layout .hot-list-widget :is(.rank, .rank-num) {
+  width: 20px; min-width: 20px; height: 24px; padding: 0;
+  border: 0; border-radius: 0; background: transparent; color: var(--text-secondary);
+  font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
+}
+.grid-layout .hot-list-widget :is(.rank.top, .rank-num.rank-top),
+.grid-layout .hot-list-widget .repo-item:nth-child(-n+3) .rank {
+  background: transparent; color: var(--accent-color); font-weight: 650;
+}
+.grid-layout .hot-list-widget :is(.title, .topic-title, .repo-name, .stock-name) {
+  font-size: 14px; font-weight: 400; line-height: 1.6; color: var(--text-primary);
+}
+.grid-layout .hot-list-widget .repo-name { font-weight: 550; }
+.grid-layout .hot-list-widget :is(.heat, .topic-meta, .repo-meta, .repo-desc, .stock-symbol) {
+  color: var(--text-secondary); font-size: 12px; line-height: 1.5;
+}
+.grid-layout .hot-list-widget .topic-info { min-width: 0; }
+.grid-layout .hot-list-widget .topic-title {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.grid-layout .hot-list-widget .topic-meta { margin-top: 4px; gap: 8px; }
+.grid-layout .hot-list-widget :is(.node, .language, .rank-flat) {
+  padding: 0; border: 0; background: transparent; color: var(--text-secondary); font-size: 12px;
+}
+.grid-layout .hot-list-widget .period-select {
+  border: 1px solid var(--border-color); background: transparent; border-radius: 6px;
+  font-size: 11px; padding: 4px 6px; color: var(--text-secondary);
+}
+.grid-layout .hot-list-widget .stock-item { border-bottom: 0; border-radius: 6px; padding: 10px 8px; }
+.grid-layout .hot-list-widget .list-header { border: 0; font-size: 11px; padding: 8px; }
+.grid-layout .hot-list-widget .tab-bar { border-bottom: 0; padding: 0 16px 8px; }
+.grid-layout .hot-list-widget .tab-btn { padding: 5px 10px; color: var(--text-secondary); }
+.grid-layout .hot-list-widget .tab-btn.active { background: var(--row-hover); color: var(--accent-color); }
+.grid-layout .hot-list-widget .watchlist-toggle { background: transparent; }
+.grid-layout .hot-list-widget .watchlist-toggle:hover { background: var(--row-hover); opacity: 1; }
+.grid-layout .nav-item:hover { transform: none; box-shadow: none; }
+.grid-layout .nav-item { border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

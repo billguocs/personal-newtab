@@ -20,7 +20,7 @@
 
         <!-- 主题列表 -->
         <div v-else-if="themeStore.hasThemes" class="themes-section">
-          <div class="section-title">推荐主题（点击预览）</div>
+          <div class="section-title">主题方案（点击预览）</div>
           <div class="theme-list">
             <div
               v-for="theme in themeStore.extractedThemes"
@@ -136,21 +136,23 @@ function getThemePreviewStyle(theme: Theme) {
 }
 
 function getBackgroundAlpha(): number {
-  const bg = themeStore.activeTheme?.colors.background || 'rgba(255,255,255,0.85)'
-  const match = bg.match(/rgba?\([^)]+,\s*([\d.]+)\)/)
-  return match ? parseFloat(match[1]) : 0.85
+  const bg = themeStore.activeTheme?.colors.surface || 'rgba(255,255,255,0.85)'
+  const match = bg.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/)
+  return match ? parseFloat(match[1]) : 1
 }
 
 function updateBackgroundAlpha(alpha: number) {
-  const bg = themeStore.activeTheme?.colors.background || '#ffffff'
+  const bg = themeStore.activeTheme?.colors.surface || '#ffffff'
   // 提取基础颜色
-  const hexMatch = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+  const color = /^#[0-9a-f]{6}$/i.test(bg) ? `rgb(${parseInt(bg.slice(1, 3), 16)}, ${parseInt(bg.slice(3, 5), 16)}, ${parseInt(bg.slice(5, 7), 16)})` : bg
+  const hexMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
   if (hexMatch) {
     const r = hexMatch[1]
     const g = hexMatch[2]
     const b = hexMatch[3]
     const newBg = `rgba(${r}, ${g}, ${b}, ${alpha})`
     themeStore.updateThemeColor('background', newBg)
+    themeStore.updateThemeColor('surface', newBg)
   }
 }
 

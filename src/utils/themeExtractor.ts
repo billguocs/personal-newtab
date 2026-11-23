@@ -221,6 +221,8 @@ export async function extractThemes(imageUrl: string): Promise<Theme[]> {
 // 应用主题到 CSS 变量
 export function applyThemeToCSS(theme: Theme): void {
   const root = document.documentElement
+  root.style.colorScheme = theme.isDark ? 'dark' : 'light'
+  root.style.setProperty('--row-hover', theme.isDark ? 'rgba(145, 164, 255, 0.12)' : 'rgba(79, 107, 237, 0.07)')
 
   root.style.setProperty('--theme-primary', theme.colors.primary)
   root.style.setProperty('--theme-background', theme.colors.background)
@@ -237,4 +239,6 @@ export function applyThemeToCSS(theme: Theme): void {
   root.style.setProperty('--glass-bg', theme.colors.surface)
   root.style.setProperty('--glass-border', theme.colors.border)
   root.style.setProperty('--bg-secondary', theme.colors.background)
+  root.style.setProperty('--bg-primary', theme.colors.surface)
+  root.style.setProperty('--border-color', theme.colors.border)
 }
